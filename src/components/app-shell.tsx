@@ -48,9 +48,8 @@ const adminNavItems = [
   { href: '/', icon: Home, label: 'Dashboard' },
   { href: '/assets', icon: Briefcase, label: 'Assets' },
   { href: '/employees', icon: Users, label: 'Employees' },
-  { href: '/companies', icon: Building, label: 'Companies' },
-  { href: '/reports', icon: Download, label: 'Reports' },
   { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/reports', icon: Download, label: 'Reports' },
 ];
 
 function MainSidebar() {
