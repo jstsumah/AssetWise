@@ -69,7 +69,7 @@ function MainSidebar() {
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader className="h-14 flex items-center p-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full">
           <Logo className="size-6 shrink-0 text-primary" />
           <span
             className={cn(
