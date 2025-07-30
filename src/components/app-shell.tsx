@@ -73,7 +73,8 @@ function MainSidebar() {
           <Logo className="size-6 shrink-0 text-primary" />
           <span
             className={cn(
-              'text-lg font-semibold text-foreground font-headline'
+              'text-lg font-semibold text-foreground font-headline whitespace-nowrap transition-all duration-300 ease-in-out',
+              'group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:scale-0'
             )}
           >
             AssetWise
