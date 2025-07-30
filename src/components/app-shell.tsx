@@ -49,8 +49,9 @@ const adminNavItems = [
   { href: '/', icon: Home, label: 'Dashboard' },
   { href: '/assets', icon: Briefcase, label: 'Assets' },
   { href: '/employees', icon: Users, label: 'Employees' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/companies', icon: Building, label: 'Companies'},
   { href: '/reports', icon: Download, label: 'Reports' },
+  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 function MainSidebar() {
@@ -73,7 +74,7 @@ function MainSidebar() {
           className={cn(
             'text-lg font-semibold text-foreground font-headline',
             !open &&
-              'group-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-data-[collapsible=icon]/sidebar-wrapper:w-0'
+              'group-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-data-[collapsible=icon]/sidebar-wrapper:w-0 group-data-[collapsible=icon]/sidebar-wrapper:scale-0'
           )}
         >
           AssetWise
