@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import './globals.css';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { DataRefreshProvider } from '@/hooks/use-data-refresh';
+import { ThemeProvider, useTheme } from '@/hooks/use-theme';
 
 
 const fontInter = Inter({
@@ -96,20 +97,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased',
           fontInter.variable,
           fontSpaceGrotesk.variable
         )}
-        suppressHydrationWarning
       >
-        <AuthProvider>
-          <DataRefreshProvider>
-            <AppContent>{children}</AppContent>
-          </DataRefreshProvider>
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+            <AuthProvider>
+              <DataRefreshProvider>
+                <AppContent>{children}</AppContent>
+              </DataRefreshProvider>
+            </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

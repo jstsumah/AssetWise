@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 export default function SettingsPage() {
   return (
@@ -22,6 +23,17 @@ export default function SettingsPage() {
       <Separator />
       <Card>
         <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>
+            Customize the look and feel of the application.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeSwitcher />
+        </CardContent>
+      </Card>
+       <Card>
+        <CardHeader>
           <CardTitle>System Configuration</CardTitle>
           <CardDescription>
             Manage system-wide settings and configurations.
@@ -29,7 +41,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Theme settings and other future configurations will appear here.
+            Other future configurations will appear here.
           </p>
         </CardContent>
       </Card>
