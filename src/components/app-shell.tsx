@@ -73,8 +73,7 @@ function MainSidebar() {
         <span
           className={cn(
             'text-lg font-semibold text-foreground font-headline',
-            !open &&
-              'group-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-data-[collapsible=icon]/sidebar-wrapper:w-0 group-data-[collapsible=icon]/sidebar-wrapper:scale-0'
+            'group-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-data-[collapsible=icon]/sidebar-wrapper:w-0 group-data-[collapsible=icon]/sidebar-wrapper:scale-0'
           )}
         >
           AssetWise
