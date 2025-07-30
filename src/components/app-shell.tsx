@@ -68,17 +68,17 @@ function MainSidebar() {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="h-14 flex items-center p-2 justify-center">
+      <SidebarHeader className="h-14 flex items-center justify-center p-2">
         <div className="flex items-center gap-2">
-            <Logo className="size-6 text-primary" />
-            <span
+          <Logo className="size-6 shrink-0 text-primary" />
+          <span
             className={cn(
-                'text-lg font-semibold text-foreground font-headline',
-                'group-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-data-[collapsible=icon]/sidebar-wrapper:w-0 group-data-[collapsible=icon]/sidebar-wrapper:scale-0'
+              'text-lg font-semibold text-foreground font-headline duration-300',
+              'group-data-[collapsible=icon]/sidebar-wrapper:w-0 group-data-[collapsible=icon]/sidebar-wrapper:opacity-0 group-data-[collapsible=icon]/sidebar-wrapper:scale-0'
             )}
-            >
+          >
             AssetWise
-            </span>
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>
