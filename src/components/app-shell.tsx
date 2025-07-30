@@ -68,7 +68,7 @@ function MainSidebar() {
 
   return (
     <Sidebar variant="inset" collapsible="icon">
-      <SidebarHeader className="h-14 flex items-center justify-between p-2">
+      <SidebarHeader className="h-14 flex items-center p-2 justify-center">
         <div className="flex items-center gap-2">
             <Logo className="size-6 text-primary" />
             <span
@@ -80,7 +80,6 @@ function MainSidebar() {
             AssetWise
             </span>
         </div>
-        <SidebarTrigger />
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
@@ -100,6 +99,9 @@ function MainSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarTrigger />
+      </SidebarFooter>
     </Sidebar>
   );
 }
