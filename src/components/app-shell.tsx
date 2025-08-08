@@ -116,7 +116,7 @@ function Header() {
     const formData = new FormData(event.currentTarget);
     const searchQuery = formData.get('search') as string;
     if (searchQuery) {
-        router.push(`/assets?search=${encodeURIComponent(searchQuery)}`);
+        router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   }
 
@@ -130,7 +130,7 @@ function Header() {
             <Input
               type="search"
               name="search"
-              placeholder="Search assets..."
+              placeholder="Search assets, employees, companies..."
               className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
               disabled={!isAdmin}
             />
