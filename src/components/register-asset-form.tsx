@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast"
 import type { Asset, Company } from "@/lib/types"
 import { addAsset, clearCache, updateAsset } from "@/lib/data"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
+import { Textarea } from "./ui/textarea"
 
 const formSchema = z.object({
   serialNumber: z.string().min(1, "Serial number is required"),
@@ -49,6 +50,7 @@ const formSchema = z.object({
     required_error: "A purchase date is required.",
   }),
   assetValue: z.coerce.number().min(0, "Asset value must be a positive number."),
+  remarks: z.string().optional(),
 })
 
 type RegisterAssetFormValues = z.infer<typeof formSchema>;
@@ -71,6 +73,7 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
       companyId: asset?.companyId ?? undefined,
       purchaseDate: asset?.purchaseDate ? new Date(asset.purchaseDate) : undefined,
       assetValue: asset?.assetValue ?? 0,
+      remarks: asset?.remarks ?? "",
     },
   })
 
@@ -286,6 +289,19 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
                 )}
             />
         </div>
+         <FormField
+            control={form.control}
+            name="remarks"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Remarks (Optional)</FormLabel>
+                <FormControl>
+                    <Textarea placeholder="e.g. Screen has a minor scratch." {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+        />
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onFinished} disabled={isSaving}>Cancel</Button>
             <Button type="submit" disabled={isSaving}>

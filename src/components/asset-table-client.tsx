@@ -290,6 +290,17 @@ export function AssetTableClient({
       className: 'hidden lg:table-cell',
     }
   },
+   {
+    accessorKey: 'remarks',
+    header: 'Remarks',
+    cell: ({ row }) => {
+      const remarks = row.getValue('remarks') as string;
+      return <div className="truncate max-w-[150px]">{remarks}</div>;
+    },
+    meta: {
+      className: 'hidden lg:table-cell',
+    }
+  },
   {
     id: 'actions',
     enableHiding: false,
@@ -333,6 +344,7 @@ export function AssetTableClient({
         'purchaseDate': false,
         'assetValue': false,
         'serialNumber': false,
+        'remarks': false,
     });
   const [rowSelection, setRowSelection] = React.useState({});
   const [globalFilter, setGlobalFilter] = React.useState(searchParams.get('search') ?? '');
@@ -387,6 +399,7 @@ export function AssetTableClient({
             'Assigned To': assignedTo,
             'Purchase Date': asset.purchaseDate,
             'Asset Value': asset.assetValue,
+            'Remarks': asset.remarks,
         };
     });
 

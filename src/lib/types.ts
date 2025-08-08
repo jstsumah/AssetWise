@@ -22,6 +22,7 @@ export type Asset = {
   history: Assignment[];
   companyId: string;
   assetValue: number;
+  remarks?: string;
 };
 
 export type Employee = {
