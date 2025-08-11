@@ -22,12 +22,12 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (!query) {
-      setIsLoading(false);
-      return;
-    }
-
     async function fetchData() {
+      if (!query) {
+        setIsLoading(false);
+        return;
+      }
+      
       setIsLoading(true);
       try {
         const [assetsData, employeesData, companiesData] = await Promise.all([
