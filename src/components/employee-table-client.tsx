@@ -12,7 +12,6 @@ import {
   CheckCircle,
   UserX,
   Eye,
-  ShieldAlert,
 } from "lucide-react";
 
 import type {
@@ -218,7 +217,6 @@ export function EmployeeTableClient({
             <div className="flex flex-col">
               <span className="font-medium">{employee.name}</span>
                {employee.role === 'Admin' && <Badge variant="secondary" className="w-fit"><ShieldCheck className="mr-1 h-3 w-3 text-primary" /> Admin</Badge>}
-               {employee.role === 'Security' && <Badge variant="secondary" className="w-fit"><ShieldAlert className="mr-1 h-3 w-3 text-orange-500" /> Security</Badge>}
             </div>
           </div>
         );
@@ -366,6 +364,7 @@ export function EmployeeTableClient({
       "Transport",
       "Workshop",
       "Reservations",
+      "Security",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [employees]);

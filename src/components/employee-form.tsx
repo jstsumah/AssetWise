@@ -26,7 +26,7 @@ const formSchema = z.object({
   email: z.string().email("Invalid email address"),
   department: z.string().min(1, "Department is required"),
   jobTitle: z.string().min(1, "Job title is required"),
-  role: z.enum(["Admin", "Employee", "Security"]),
+  role: z.enum(["Admin", "Employee"]),
 })
 
 export function EmployeeForm({ onFinished, departments, employee }: { onFinished: () => void, departments: string[], employee?: Employee }) {
@@ -161,7 +161,6 @@ export function EmployeeForm({ onFinished, departments, employee }: { onFinished
                         <SelectContent>
                             <SelectItem value="Admin">Admin</SelectItem>
                             <SelectItem value="Employee">Employee</SelectItem>
-                            <SelectItem value="Security">Security</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
