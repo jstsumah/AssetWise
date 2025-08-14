@@ -70,6 +70,7 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
       "Workshop",
       "Reservations",
       "Security",
+      "Maintenance",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [allEmployees]);
