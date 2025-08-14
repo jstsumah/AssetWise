@@ -32,7 +32,7 @@ export type Employee = {
   jobTitle: string;
   email: string;
   avatarUrl: string;
-  role: 'Admin' | 'Employee';
+  role: 'Admin' | 'Employee' | 'Security';
   active: boolean;
 };
 
