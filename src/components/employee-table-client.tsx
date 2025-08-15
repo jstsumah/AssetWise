@@ -366,6 +366,7 @@ export function EmployeeTableClient({
       "Reservations",
       "Security",
       "Maintenance",
+      "Nurse",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [employees]);

@@ -71,6 +71,7 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
       "Reservations",
       "Security",
       "Maintenance",
+      "Nurse",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [allEmployees]);
