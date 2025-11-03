@@ -15,9 +15,10 @@ import {
   Download,
   Building,
   HelpCircle,
+  Eye,
 } from 'lucide-react';
 import Papa from 'papaparse';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import type {
   ColumnDef,
@@ -79,6 +80,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { AssignAssetForm } from './assign-asset-form';
 import { PurchaseDate } from './purchase-date';
+import Link from 'next/link';
 
 const statusConfig: Record<
   AssetStatus,
@@ -113,6 +115,7 @@ export function AssetTableClient({
   const { refreshData } = useDataRefresh();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   const [selectedAsset, setSelectedAsset] = React.useState<Asset | null>(null);
   const [isRegisterOpen, setIsRegisterOpen] = React.useState(false);
@@ -186,7 +189,9 @@ export function AssetTableClient({
     accessorKey: 'tagNo',
     header: 'Tag No',
     cell: ({ row }) => (
-      <div className="font-medium font-mono">{row.getValue('tagNo')}</div>
+        <Link href={`/assets/${row.original.id}`} className="font-medium font-mono hover:underline">
+            {row.getValue('tagNo')}
+        </Link>
     ),
   },
   {
@@ -316,6 +321,10 @@ export function AssetTableClient({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => router.push(`/assets/${asset.id}`)}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(asset.id)}>
               Copy Asset ID
             </DropdownMenuItem>
