@@ -322,7 +322,6 @@ export function AssetTableClient({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => router.push(`/assets/${asset.id}`)}>
-              <Eye className="mr-2 h-4 w-4" />
               View Details
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(asset.id)}>
