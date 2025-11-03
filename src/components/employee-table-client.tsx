@@ -279,7 +279,6 @@ export function EmployeeTableClient({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => router.push(`/employees/${employee.id}`)}>
-                <Eye className="mr-2 h-4 w-4" />
                 View Profile
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openForm(employee)}>
@@ -288,17 +287,14 @@ export function EmployeeTableClient({
               <DropdownMenuSeparator />
               {!employee.active ? (
                 <DropdownMenuItem onClick={() => handleActivate(employee)}>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                   Activate User
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem onClick={() => openDeactivateAlert(employee)} disabled={isCurrentUser}>
-                    <UserX className="mr-2 h-4 w-4" />
                     Deactivate User
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem className="text-destructive" onClick={() => openDeleteAlert(employee)} disabled={isCurrentUser}>
-                  <UserX className="mr-2 h-4 w-4" />
                   Delete User
               </DropdownMenuItem>
               <DropdownMenuSeparator />
