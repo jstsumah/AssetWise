@@ -12,8 +12,9 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDataRefresh } from '@/hooks/use-data-refresh';
 import { PurchaseDate } from './purchase-date';
-import { Circle, HardDrive, HelpCircle, Laptop, Smartphone, Tablet } from 'lucide-react';
+import { ArrowLeft, Circle, HardDrive, HelpCircle, Laptop, Smartphone, Tablet } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from './ui/button';
 
 const statusConfig: Record<
   Asset['status'],
@@ -131,6 +132,14 @@ export function AssetDetail({ assetId }: { assetId: string }) {
   return (
     <>
     <div className="flex-1 space-y-6 p-4 md:p-8">
+      <div className="flex items-center gap-4 mb-4">
+        <Button asChild variant="outline" size="sm">
+            <Link href="/assets">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Assets
+            </Link>
+        </Button>
+      </div>
       <div className="flex items-start justify-between space-y-2">
         <div>
             <h1 className="text-3xl font-bold tracking-tight font-headline">
