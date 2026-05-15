@@ -19,16 +19,19 @@ export function clearCache() {
 
 async function fetchCollection<T>(collectionName: string, cache: T[] | null, setCache: (data: T[]) => void): Promise<T[]> {
   if (cache) {
+    console.log(`[Data] Returning cached ${collectionName}`);
     return cache;
   }
   try {
+    console.log(`[Data] Fetching ${collectionName}...`);
     const dataCollection = collection(db, collectionName);
     const dataSnapshot = await getDocs(dataCollection);
+    console.log(`[Data] Retrieved ${dataSnapshot.docs.length} documents from ${collectionName}`);
     const data = dataSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
     setCache(data);
     return data;
   } catch (error) {
-    console.error(`Error fetching ${collectionName}: `, error);
+    console.error(`[Data] Error fetching ${collectionName}: `, error);
     throw new Error(`Failed to fetch ${collectionName}.`);
   }
 }
@@ -40,17 +43,20 @@ export const getAssets = async (): Promise<Asset[]> => fetchCollection('assets',
 
 export const getRecentActivity = async (): Promise<RecentActivity[]> => {
     if (recentActivity) {
+        console.log(`[Data] Returning cached recent activity`);
         return recentActivity;
     }
     try {
+        console.log(`[Data] Fetching recent activity...`);
         const activityCollection = collection(db, 'activity');
         const q = query(activityCollection, orderBy('date', 'desc'), limit(5));
         const snapshot = await getDocs(q);
+        console.log(`[Data] Retrieved ${snapshot.docs.length} activity records`);
         const activities = snapshot.docs.map(doc => doc.data() as RecentActivity);
         recentActivity = activities;
         return activities;
     } catch (error) {
-        console.error("Error fetching recent activity:", error);
+        console.error("[Data] Error fetching recent activity:", error);
         return [];
     }
 };

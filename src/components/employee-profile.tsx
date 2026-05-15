@@ -3,8 +3,8 @@
 
 import * as React from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getAssets, getEmployees, getEmployeeById } from '@/lib/data';
-import type { Asset, Employee } from '@/lib/types';
+import { getAssets, getEmployees, getEmployeeById, getCompanies } from '@/lib/data';
+import type { Asset, Employee, Company } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
   const [employee, setEmployee] = React.useState<Employee | null>(null);
   const [allAssets, setAllAssets] = React.useState<Asset[]>([]);
   const [allEmployees, setAllEmployees] = React.useState<Employee[]>([]);
+  const [companies, setCompanies] = React.useState<Company[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const { dataVersion } = useDataRefresh();
@@ -33,14 +34,16 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
 
       setIsLoading(true);
       try {
-        const [assetsData, employeesData, employeeData] = await Promise.all([
+        const [assetsData, employeesData, employeeData, companiesData] = await Promise.all([
             getAssets(),
             getEmployees(),
-            getEmployeeById(employeeId)
+            getEmployeeById(employeeId),
+            getCompanies()
         ]);
         setAllAssets(assetsData);
         setAllEmployees(employeesData);
         setEmployee(employeeData || null);
+        setCompanies(companiesData);
       } catch (error) {
         console.error("Failed to load profile page data:", error)
       } finally {
@@ -72,6 +75,8 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
       "Security",
       "Maintenance",
       "Nurse",
+      "Sustainability",
+      "CWC Liason",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [allEmployees]);
@@ -142,6 +147,10 @@ export function EmployeeProfile({ employeeId }: { employeeId: string }) {
             <div>
                 <p className="text-sm font-medium text-muted-foreground">Department</p>
                 <p className="text-sm">{employee.department}</p>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-muted-foreground">Company</p>
+                <p className="text-sm">{companies.find(c => c.id === employee.companyId)?.name || 'N/A'}</p>
             </div>
              <div>
                 <p className="text-sm font-medium text-muted-foreground">Role</p>

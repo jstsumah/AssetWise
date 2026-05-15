@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import type { Asset, Employee } from "@/lib/types"
+import type { Asset, Employee, Company } from "@/lib/types"
 import { updateAsset, clearCache } from "@/lib/data"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
 import { format } from "date-fns"
@@ -37,7 +37,7 @@ const formSchema = z.object({
 
 type AssignAssetFormValues = z.infer<typeof formSchema>;
 
-export function AssignAssetForm({ onFinished, employees, asset }: { onFinished: () => void, employees: Employee[], asset: Asset }) {
+export function AssignAssetForm({ onFinished, employees, companies, asset }: { onFinished: () => void, employees: Employee[], companies: Company[], asset: Asset }) {
   const { toast } = useToast()
   const { refreshData } = useDataRefresh();
   const [isSaving, setIsSaving] = React.useState(false);
@@ -100,9 +100,14 @@ export function AssignAssetForm({ onFinished, employees, asset }: { onFinished: 
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>{employee.name}</SelectItem>
-                  ))}
+                  {employees.map((employee) => {
+                    const company = companies.find(c => c.id === employee.companyId);
+                    return (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.name} {company ? `(${company.name})` : ''}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <FormMessage />

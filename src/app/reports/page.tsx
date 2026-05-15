@@ -8,6 +8,8 @@ import type { Asset, Employee, Company } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useDataRefresh } from '@/hooks/use-data-refresh';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 
 export default function ReportsPage() {
@@ -16,6 +18,15 @@ export default function ReportsPage() {
   const [companies, setCompanies] = React.useState<Company[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const { dataVersion } = useDataRefresh();
+  const { isAdmin, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Redirect non-admins away from this page
+  React.useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, authLoading, router]);
 
   React.useEffect(() => {
     async function loadData() {
@@ -35,8 +46,11 @@ export default function ReportsPage() {
           setIsLoading(false);
         }
     }
-    loadData();
-  }, [dataVersion]);
+    // Only load data if user is admin
+    if (!authLoading && isAdmin) {
+      loadData();
+    }
+  }, [dataVersion, authLoading, isAdmin]);
 
   if (isLoading) {
     return (

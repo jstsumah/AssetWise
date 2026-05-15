@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, ActionCodeSettings, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from '@/lib/firebase';
 import type { Employee } from '@/lib/types';
@@ -17,6 +17,7 @@ interface AuthContextType {
   signup: (name: string, email: string, pass: string) => Promise<string | null>;
   logout: () => void;
   updateUser: (data: Partial<Pick<Employee, 'name' | 'jobTitle' | 'department'>>) => Promise<void>;
+  resetPassword: (email: string) => Promise<string | null>;
   isLoading: boolean;
   isAdmin: boolean;
 }
@@ -40,11 +41,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setIsLoading(true);
       if (fbUser) {
-        const userDocRef = doc(db, 'employees', fbUser.uid);
         try {
-          const userDoc = await getDoc(userDocRef);
+          // First try to get by UID (if docs are keyed by UID)
+          let userDoc = await getDoc(doc(db, 'employees', fbUser.uid));
+          let userDocId = fbUser.uid;
+
+          // If not found by UID, query by email
+          if (!userDoc.exists() && fbUser.email) {
+            const employeesRef = collection(db, 'employees');
+            const q = query(employeesRef, where('email', '==', fbUser.email));
+            const snapshot = await getDocs(q);
+            
+            if (!snapshot.empty) {
+              userDoc = snapshot.docs[0];
+              userDocId = userDoc.id;
+            }
+          }
+
           if (userDoc.exists()) {
-            const userData = { id: userDoc.id, ...userDoc.data() } as Employee;
+            const userData = { id: userDocId, ...userDoc.data() } as Employee;
             if (userData.active) {
               setUser(userData);
               setFirebaseUser(fbUser);
@@ -84,16 +99,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
         const fbUser = userCredential.user;
 
-        // After successful auth, check Firestore for the user document and status
-        const userDocRef = doc(db, 'employees', fbUser.uid);
-        const userDoc = await getDoc(userDocRef);
+        // After successful auth, check Firestore for the user document by UID or email
+        // First try to get by UID (if docs are keyed by UID)
+        let userDoc = await getDoc(doc(db, 'employees', fbUser.uid));
+        let userDocId = fbUser.uid;
+
+        // If not found by UID, query by email
+        if (!userDoc.exists()) {
+            const employeesRef = collection(db, 'employees');
+            const q = query(employeesRef, where('email', '==', email));
+            const snapshot = await getDocs(q);
+            
+            if (snapshot.empty) {
+                await signOut(auth);
+                return 'auth/user-not-found';
+            }
+            
+            userDoc = snapshot.docs[0];
+            userDocId = userDoc.id;
+        }
 
         if (!userDoc.exists()) {
             await signOut(auth);
             return 'auth/user-not-found';
         }
 
-        const userData = { id: userDoc.id, ...userDoc.data() } as Employee;
+        const userData = { id: userDocId, ...userDoc.data() } as Employee;
 
         if (!userData.active) {
             await signOut(auth);
@@ -155,6 +186,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signOut(auth);
   };
 
+  const resetPassword = async (email: string): Promise<string | null> => {
+    try {
+      console.log(`[Auth] Sending password reset email to: ${email}`);
+      const origin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:9002';
+      const actionCodeSettings: ActionCodeSettings = {
+        url: `${origin}/reset-password`,
+        handleCodeInApp: true,
+      };
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      return null;
+    } catch (error) {
+      if (isFirebaseError(error)) {
+        console.error(`[Auth] Password reset error (${error.code}):`, error);
+        return error.code;
+      }
+      console.error("Unknown password reset error:", error);
+      return 'auth/unknown-error';
+    }
+  };
+
   const updateUser = async (data: Partial<Pick<Employee, 'name' | 'jobTitle' | 'department'>>) => {
     if (!user) {
       toast({
@@ -186,7 +240,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, login, signup, logout, updateUser, isLoading, isAdmin }}>
+    <AuthContext.Provider value={{ user, firebaseUser, login, signup, logout, resetPassword, updateUser, isLoading, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

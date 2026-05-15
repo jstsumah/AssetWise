@@ -62,6 +62,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import type { Asset, Employee, AssetStatus, AssetCategory, Company } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -231,6 +238,18 @@ export function AssetTableClient({
         <div className="text-sm text-muted-foreground">{row.original.model}</div>
       </div>
     ),
+  },
+  {
+    accessorKey: 'companyId',
+    header: 'Company',
+    cell: ({ row }) => {
+      const companyId = row.getValue('companyId') as string;
+      const company = getCompanyById(companyId);
+      return <span className="font-medium">{company?.name || 'Unknown'}</span>;
+    },
+    meta: {
+        className: 'hidden md:table-cell',
+    }
   },
   {
     accessorKey: 'assetValue',
@@ -443,6 +462,24 @@ export function AssetTableClient({
             className="w-full md:max-w-sm"
           />
           <div className="flex w-full md:w-auto items-center gap-2">
+            <Select
+              value={(table.getColumn('companyId')?.getFilterValue() as string) ?? 'all'}
+              onValueChange={(value) =>
+                table.getColumn('companyId')?.setFilterValue(value === 'all' ? undefined : value)
+              }
+            >
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Filter by Company" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Companies</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button className="w-full md:w-auto" variant="outline" onClick={exportToCsv}>
               <Download className="mr-2 h-4 w-4" />
               Export
@@ -547,7 +584,32 @@ export function AssetTableClient({
             {table.getFilteredSelectedRowModel().rows.length} of{' '}
             {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
-          <div className="space-x-2">
+          <div className="flex items-center space-x-6 lg:space-x-8">
+            <div className="flex items-center space-x-2">
+              <p className="text-sm font-medium">Rows per page</p>
+              <Select
+                value={`${table.getState().pagination.pageSize}`}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value))
+                }}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={table.getState().pagination.pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 20, 30, 40, 50, 100].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+            </div>
+            <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
@@ -565,6 +627,7 @@ export function AssetTableClient({
               Next
             </Button>
           </div>
+        </div>
         </div>
       </CardContent>
     </Card>
@@ -585,7 +648,7 @@ export function AssetTableClient({
                 <DialogTitle>Assign Asset</DialogTitle>
                 <DialogDescription>Assign asset {selectedAsset?.serialNumber} to an employee.</DialogDescription>
             </DialogHeader>
-            {selectedAsset && <AssignAssetForm onFinished={closeDialogs} employees={employees} asset={selectedAsset} />}
+            {selectedAsset && <AssignAssetForm onFinished={closeDialogs} employees={employees} companies={companies} asset={selectedAsset} />}
         </DialogContent>
     </Dialog>
 

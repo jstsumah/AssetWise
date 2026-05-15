@@ -8,12 +8,23 @@ import type { Company, Asset } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CompanyTableClient } from '@/components/company-table-client';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 export default function CompaniesPage() {
   const { dataVersion } = useDataRefresh();
   const [companies, setCompanies] = React.useState<Company[]>([]);
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const { isAdmin, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Redirect non-admins away from this page
+  React.useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, authLoading, router]);
 
   React.useEffect(() => {
     async function loadData() {
@@ -31,8 +42,11 @@ export default function CompaniesPage() {
         setIsLoading(false);
       }
     }
-    loadData();
-  }, [dataVersion]);
+    // Only load data if user is admin
+    if (!authLoading && isAdmin) {
+      loadData();
+    }
+  }, [dataVersion, authLoading, isAdmin]);
 
   if (isLoading) {
     return (

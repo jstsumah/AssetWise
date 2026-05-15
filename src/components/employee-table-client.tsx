@@ -56,7 +56,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { Employee } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Employee, Company } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -66,6 +73,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmployeeForm } from "./employee-form";
+import { SendPasswordResetDialog } from "./send-password-reset-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
@@ -75,8 +83,10 @@ import { useAuth } from "@/hooks/use-auth";
 
 export function EmployeeTableClient({
   employees,
+  companies,
 }: {
   employees: Employee[];
+  companies: Company[];
 }) {
   const router = useRouter();
   const { refreshData } = useDataRefresh();
@@ -92,8 +102,13 @@ export function EmployeeTableClient({
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeactivateAlertOpen, setIsDeactivateAlertOpen] = React.useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
+  const [isPasswordResetDialogOpen, setIsPasswordResetDialogOpen] = React.useState(false);
   const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | undefined>(undefined);
   const { toast } = useToast();
+
+  const getCompanyById = (id: string) => {
+    return companies.find((c) => c.id === id);
+  };
 
   const openForm = (employee?: Employee) => {
     setSelectedEmployee(employee);
@@ -246,6 +261,17 @@ export function EmployeeTableClient({
       }
     },
     {
+      accessorKey: "companyId",
+      header: "Company",
+      cell: ({ row }) => {
+        const company = getCompanyById(row.getValue("companyId"));
+        return <div>{company?.name || 'N/A'}</div>;
+      },
+      meta: {
+        className: 'hidden md:table-cell',
+      }
+    },
+    {
       accessorKey: "active",
       header: "Status",
       cell: ({ row }) => {
@@ -294,6 +320,9 @@ export function EmployeeTableClient({
                     Deactivate User
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setIsPasswordResetDialogOpen(true); }}>
+                Send Password Reset
+              </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={() => openDeleteAlert(employee)} disabled={isCurrentUser}>
                   Delete User
               </DropdownMenuItem>
@@ -331,12 +360,14 @@ export function EmployeeTableClient({
     globalFilterFn: (row, columnId, filterValue) => {
       const employee = row.original;
       const searchTerm = filterValue.toLowerCase();
+      const company = getCompanyById(employee.companyId);
 
       return (
         employee.name.toLowerCase().includes(searchTerm) ||
         employee.email.toLowerCase().includes(searchTerm) ||
         employee.department.toLowerCase().includes(searchTerm) ||
-        employee.jobTitle.toLowerCase().includes(searchTerm)
+        employee.jobTitle.toLowerCase().includes(searchTerm) ||
+        (company?.name.toLowerCase().includes(searchTerm) ?? false)
       );
     },
     state: {
@@ -363,6 +394,8 @@ export function EmployeeTableClient({
       "Security",
       "Maintenance",
       "Nurse",
+      "Sustainability",
+      "CWC Liason",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [employees]);
@@ -472,7 +505,32 @@ export function EmployeeTableClient({
             {table.getFilteredSelectedRowModel().rows.length} of{" "}
             {table.getFilteredRowModel().rows.length} row(s) selected.
           </div>
-          <div className="space-x-2">
+          <div className="flex items-center space-x-6 lg:space-x-8">
+            <div className="flex items-center space-x-2">
+              <p className="text-sm font-medium">Rows per page</p>
+              <Select
+                value={`${table.getState().pagination.pageSize}`}
+                onValueChange={(value) => {
+                  table.setPageSize(Number(value))
+                }}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={table.getState().pagination.pageSize} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 20, 30, 40, 50, 100].map((pageSize) => (
+                    <SelectItem key={pageSize} value={`${pageSize}`}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+            </div>
+            <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
@@ -491,6 +549,7 @@ export function EmployeeTableClient({
             </Button>
           </div>
         </div>
+        </div>
       </CardContent>
        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent 
@@ -503,7 +562,7 @@ export function EmployeeTableClient({
                 Fill in the details below to {selectedEmployee ? 'update the' : 'add a new'} employee.
             </DialogDescription>
             </DialogHeader>
-            <EmployeeForm onFinished={closeForm} departments={departments} employee={selectedEmployee} />
+            <EmployeeForm onFinished={closeForm} departments={departments} companies={companies} employee={selectedEmployee} />
         </DialogContent>
        </Dialog>
         <AlertDialog open={isDeactivateAlertOpen} onOpenChange={setIsDeactivateAlertOpen}>
@@ -534,6 +593,12 @@ export function EmployeeTableClient({
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        <SendPasswordResetDialog 
+          open={isPasswordResetDialogOpen}
+          onOpenChange={setIsPasswordResetDialogOpen}
+          employeeEmail={selectedEmployee?.email || ''}
+          employeeName={selectedEmployee?.name || ''}
+        />
     </Card>
   );
 }

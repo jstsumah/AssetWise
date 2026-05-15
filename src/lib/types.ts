@@ -34,6 +34,7 @@ export type Employee = {
   avatarUrl: string;
   role: 'Admin' | 'Employee';
   active: boolean;
+  companyId: string;
 };
 
 export type Assignment = {

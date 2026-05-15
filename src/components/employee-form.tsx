@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import type { Employee } from "@/lib/types"
+import type { Employee, Company } from "@/lib/types"
 import { updateEmployee, clearCache, createEmployee } from "@/lib/data"
 import { LoaderCircle } from "lucide-react"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
@@ -27,9 +27,10 @@ const formSchema = z.object({
   department: z.string().min(1, "Department is required"),
   jobTitle: z.string().min(1, "Job title is required"),
   role: z.enum(["Admin", "Employee"]),
+  companyId: z.string().min(1, "Company is required"),
 })
 
-export function EmployeeForm({ onFinished, departments, employee }: { onFinished: () => void, departments: string[], employee?: Employee }) {
+export function EmployeeForm({ onFinished, departments, companies, employee }: { onFinished: () => void, departments: string[], companies: Company[], employee?: Employee }) {
   const { toast } = useToast()
   const { refreshData } = useDataRefresh();
   const [isSaving, setIsSaving] = React.useState(false)
@@ -42,6 +43,7 @@ export function EmployeeForm({ onFinished, departments, employee }: { onFinished
       department: employee?.department ?? "",
       jobTitle: employee?.jobTitle ?? "",
       role: employee?.role ?? "Employee",
+      companyId: employee?.companyId ?? "",
     },
   })
 
@@ -53,8 +55,8 @@ export function EmployeeForm({ onFinished, departments, employee }: { onFinished
       if (isEditing && employee) {
         // We only pass the fields that are actually editable in this form.
         // We don't want to allow changing the email here.
-        const { name, department, jobTitle, role } = values;
-        await updateEmployee(employee.id, { name, department, jobTitle, role });
+        const { name, department, jobTitle, role, companyId } = values;
+        await updateEmployee(employee.id, { name, department, jobTitle, role, companyId });
         toast({
             title: "Employee Updated!",
             description: `Successfully updated ${values.name} in the system.`,
@@ -146,6 +148,28 @@ export function EmployeeForm({ onFinished, departments, employee }: { onFinished
             )}
             />
         </div>
+        <FormField
+            control={form.control}
+            name="companyId"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a company" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {companies.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
          <FormField
             control={form.control}
             name="role"

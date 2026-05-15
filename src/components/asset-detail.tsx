@@ -65,6 +65,7 @@ function HistoryRow({ assignment, employee }: { assignment: Assignment; employee
 export function AssetDetail({ assetId }: { assetId: string }) {
   const [asset, setAsset] = React.useState<Asset | null>(null);
   const [employees, setEmployees] = React.useState<Employee[]>([]);
+  const [companies, setCompanies] = React.useState<Company[]>([]);
   const [company, setCompany] = React.useState<Company | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const { dataVersion } = useDataRefresh();
@@ -83,9 +84,10 @@ export function AssetDetail({ assetId }: { assetId: string }) {
         
         setAsset(assetData || null);
         setEmployees(employeesData);
+        setCompanies(companiesData);
 
         if (assetData) {
-            const companyData = await getCompanyById(assetData.companyId, companiesData);
+            const companyData = await getCompanyById(assetData.companyId);
             setCompany(companyData || null);
         }
 
@@ -208,6 +210,7 @@ export function AssetDetail({ assetId }: { assetId: string }) {
                                 <Link href={`/employees/${currentEmployee.id}`} className="font-semibold hover:underline">{currentEmployee.name}</Link>
                                 <p className="text-sm text-muted-foreground">{currentEmployee.jobTitle}</p>
                                 <p className="text-sm text-muted-foreground">{currentEmployee.department}</p>
+                                <p className="text-sm text-muted-foreground">{companies.find(c => c.id === currentEmployee.companyId)?.name}</p>
                             </div>
                         </div>
                     ) : (
