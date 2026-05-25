@@ -30,6 +30,8 @@ import {
 } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
+import Papa from 'papaparse';
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -108,6 +110,50 @@ export function EmployeeTableClient({
 
   const getCompanyById = (id: string) => {
     return companies.find((c) => c.id === id);
+  };
+
+  // Export employees to CSV
+  const exportToCsv = () => {
+    const dataToExport = employees.map((emp: Employee) => {
+      const company = getCompanyById(emp.companyId);
+      return {
+        'Name': emp.name,
+        'Email': emp.email,
+        'Department': emp.department,
+        'Job Title': emp.jobTitle,
+        'Role': emp.role,
+        'Company': company?.name || '',
+        'Status': emp.active ? 'Active' : 'Inactive',
+      };
+    });
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'employees.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  // Import employees from CSV
+  const importFromCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    Papa.parse(file, {
+      header: true,
+      complete: async (results) => {
+        toast({ title: 'Import Complete', description: `${results.data.length} employees imported (demo only).` });
+      },
+      error: (error) => {
+        toast({ title: 'Import Failed', description: error.message, variant: 'destructive' });
+      }
+    });
+    event.target.value = '';
   };
 
   const openForm = (employee?: Employee) => {
@@ -422,6 +468,15 @@ export function EmployeeTableClient({
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Employee
             </Button>
+            <Button className="w-full md:w-auto" variant="outline" onClick={exportToCsv}>
+              Export
+            </Button>
+            <label className="w-full md:w-auto">
+              <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importFromCsv} />
+              <Button asChild variant="outline">
+                <span>Import</span>
+              </Button>
+            </label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="ml-auto hidden md:flex">

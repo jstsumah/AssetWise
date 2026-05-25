@@ -14,6 +14,7 @@ import {
   User as UserIcon,
   ShieldCheck,
   Building,
+  KeyRound,
 } from 'lucide-react';
 
 import {
@@ -51,6 +52,7 @@ const adminNavItems = [
   { href: '/employees', icon: Users, label: 'Employees' },
   { href: '/companies', icon: Building, label: 'Companies'},
   { href: '/reports', icon: Download, label: 'Reports' },
+  { href: '/vault', icon: KeyRound, label: 'Vault' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -62,6 +64,7 @@ function MainSidebar() {
   const employeeNavItems = [
       { href: '/', icon: Home, label: 'Dashboard' },
       { href: `/employees/${user?.id}`, icon: UserIcon, label: 'My Profile & Assets' },
+      { href: '/vault', icon: KeyRound, label: 'Vault' },
   ];
 
   const navItems = isAdmin ? adminNavItems : employeeNavItems;

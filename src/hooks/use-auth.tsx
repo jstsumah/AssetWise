@@ -159,7 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         jobTitle: 'New Employee',
         avatarUrl: '',
         role: 'Employee',
-        active: false, 
+        active: false,
+        companyId: '',
       };
       
       await setDoc(doc(db, 'employees', newUser.uid), newEmployeeData);

@@ -1,6 +1,7 @@
 
 'use client';
 
+
 import * as React from 'react';
 import {
   ChevronsUpDown,
@@ -123,6 +124,22 @@ export function AssetTableClient({
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Import assets from CSV
+  const importFromCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    Papa.parse(file, {
+      header: true,
+      complete: async (results) => {
+        toast({ title: 'Import Complete', description: `${results.data.length} assets imported (demo only).` });
+      },
+      error: (error) => {
+        toast({ title: 'Import Failed', description: error.message, variant: 'destructive' });
+      }
+    });
+    event.target.value = '';
+  };
   
   const [selectedAsset, setSelectedAsset] = React.useState<Asset | null>(null);
   const [isRegisterOpen, setIsRegisterOpen] = React.useState(false);
@@ -484,6 +501,12 @@ export function AssetTableClient({
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
+            <label className="w-full md:w-auto">
+              <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importFromCsv} />
+              <Button asChild variant="outline">
+                <span>Import</span>
+              </Button>
+            </label>
             <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full md:w-auto" onClick={() => setIsRegisterOpen(true)}>

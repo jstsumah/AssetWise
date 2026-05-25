@@ -53,3 +53,30 @@ export type RecentActivity = {
   date: string;
   action: 'Assigned' | 'Returned';
 }
+
+export type VaultCategory = 'Login' | 'Wi-Fi' | 'API Key' | 'SSH Key' | 'Database' | 'Other';
+export type VaultAccess = 'owner' | 'admins' | 'company';
+
+export type PasswordHistoryEntry = {
+  encryptedPassword: string;
+  iv: string;
+  updatedAt: string;
+};
+
+export type VaultEntry = {
+  id: string;
+  title: string;
+  username: string;
+  encryptedPassword: string; // AES-GCM ciphertext (base64)
+  iv: string;                // Initialization vector (base64)
+  url?: string;
+  notes?: string;
+  category: VaultCategory;
+  accessLevel: VaultAccess;
+  ownerId: string;           // Employee UID
+  ownerName: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+  passwordHistory?: PasswordHistoryEntry[];
+};

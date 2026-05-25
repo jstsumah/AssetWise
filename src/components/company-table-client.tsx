@@ -1,5 +1,7 @@
-
 'use client';
+
+import Papa from 'papaparse';
+
 
 import * as React from 'react';
 import {
@@ -42,6 +44,42 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 
 export function CompanyTableClient({ companies, assets }: { companies: Company[], assets: Asset[] }) {
+    // Export companies to CSV
+    const exportToCsv = () => {
+      const dataToExport = companies.map(company => ({
+        'Name': company.name,
+        'ID': company.id,
+      }));
+      const csv = Papa.unparse(dataToExport);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'companies.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    };
+
+    // Import companies from CSV
+    const importFromCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      Papa.parse(file, {
+        header: true,
+        complete: async (results) => {
+          // Implement your import logic here, e.g., call an API or update state
+          toast({ title: 'Import Complete', description: `${results.data.length} companies imported (demo only).` });
+        },
+        error: (error) => {
+          toast({ title: 'Import Failed', description: error.message, variant: 'destructive' });
+        }
+      });
+      event.target.value = '';
+    };
   const { refreshData } = useDataRefresh();
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
@@ -95,19 +133,28 @@ export function CompanyTableClient({ companies, assets }: { companies: Company[]
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <CardTitle>All Companies</CardTitle>
               <CardDescription>
                 Add, edit, or remove companies from your organization.
               </CardDescription>
             </div>
+            <div className="flex gap-2">
               <DialogTrigger asChild>
-              <Button onClick={() => openForm()}>
-                <PlusCircle className="mr-2" />
-                Add Company
-              </Button>
-            </DialogTrigger>
+                <Button onClick={() => openForm()}>
+                  <PlusCircle className="mr-2" />
+                  Add Company
+                </Button>
+              </DialogTrigger>
+              <Button variant="outline" onClick={exportToCsv}>Export</Button>
+              <label>
+                <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importFromCsv} />
+                <Button asChild variant="outline">
+                  <span>Import</span>
+                </Button>
+              </label>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

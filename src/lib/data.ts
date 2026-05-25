@@ -1,5 +1,5 @@
 
-import type { Asset, Company, Employee, RecentActivity } from './types';
+import type { Asset, Company, Employee, RecentActivity, VaultEntry } from './types';
 import { collection, doc, getDocs, updateDoc, addDoc, setDoc, deleteDoc, query, orderBy, limit, where } from "firebase/firestore";
 import { db } from './firebase';
 
@@ -151,3 +151,45 @@ export const deleteCompany = async (companyId: string) => {
     await deleteDoc(companyDocRef);
     clearCache();
 }
+
+// ─── Vault (Password Manager) ─────────────────────────────────────────────────
+
+export const getVaultEntries = async (
+    companyId: string,
+    userId: string,
+    isAdmin: boolean
+): Promise<VaultEntry[]> => {
+    try {
+        const vaultRef = collection(db, 'vault');
+        // Fetch all entries for this company, then filter by access level client-side
+        const q = query(vaultRef, where('companyId', '==', companyId));
+        const snapshot = await getDocs(q);
+        const allEntries = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as VaultEntry));
+
+        return allEntries.filter(entry => {
+            if (entry.accessLevel === 'company') return true;
+            if (entry.accessLevel === 'admins' && isAdmin) return true;
+            if (entry.ownerId === userId) return true;
+            return false;
+        });
+    } catch (error) {
+        console.error('[Data] Error fetching vault entries:', error);
+        return [];
+    }
+};
+
+export const addVaultEntry = async (data: Omit<VaultEntry, 'id'>): Promise<string> => {
+    const vaultRef = collection(db, 'vault');
+    const docRef = await addDoc(vaultRef, data);
+    return docRef.id;
+};
+
+export const updateVaultEntry = async (entryId: string, data: Partial<Omit<VaultEntry, 'id'>>): Promise<void> => {
+    const entryRef = doc(db, 'vault', entryId);
+    await updateDoc(entryRef, data);
+};
+
+export const deleteVaultEntry = async (entryId: string): Promise<void> => {
+    const entryRef = doc(db, 'vault', entryId);
+    await deleteDoc(entryRef);
+};
