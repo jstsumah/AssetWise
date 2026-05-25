@@ -15,8 +15,38 @@
 -- ─── 1. COMPANIES TABLE ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS companies (
     id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL,
+    website VARCHAR(255),
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    industry VARCHAR(100),
+    address TEXT,
+    taxId VARCHAR(100)
 );
+
+-- Safe Column Upgrades for Companies
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='website') THEN
+        ALTER TABLE companies ADD COLUMN website VARCHAR(255);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='email') THEN
+        ALTER TABLE companies ADD COLUMN email VARCHAR(255);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='phone') THEN
+        ALTER TABLE companies ADD COLUMN phone VARCHAR(50);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='industry') THEN
+        ALTER TABLE companies ADD COLUMN industry VARCHAR(100);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='address') THEN
+        ALTER TABLE companies ADD COLUMN address TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='taxId') THEN
+        ALTER TABLE companies ADD COLUMN taxId VARCHAR(100);
+    END IF;
+END $$;
+
 
 -- ─── 2. EMPLOYEES TABLE ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS employees (

@@ -3,8 +3,8 @@
 
 import * as React from 'react';
 import { useDataRefresh } from '@/hooks/use-data-refresh';
-import { getCompanies, getAssets } from '@/lib/data';
-import type { Company, Asset } from '@/lib/types';
+import { getCompanies, getAssets, getEmployees } from '@/lib/data';
+import type { Company, Asset, Employee } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CompanyTableClient } from '@/components/company-table-client';
@@ -15,6 +15,7 @@ export default function CompaniesPage() {
   const { dataVersion } = useDataRefresh();
   const [companies, setCompanies] = React.useState<Company[]>([]);
   const [assets, setAssets] = React.useState<Asset[]>([]);
+  const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const { isAdmin, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -30,12 +31,14 @@ export default function CompaniesPage() {
     async function loadData() {
       setIsLoading(true);
       try {
-        const [companiesData, assetsData] = await Promise.all([
-            getCompanies(),
-            getAssets()
+        const [companiesData, assetsData, employeesData] = await Promise.all([
+             getCompanies(),
+             getAssets(),
+             getEmployees()
         ]);
         setCompanies(companiesData);
         setAssets(assetsData);
+        setEmployees(employeesData);
       } catch (error) {
         console.error('Failed to load companies data:', error);
       } finally {
@@ -72,7 +75,7 @@ export default function CompaniesPage() {
   return (
      <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold font-headline mb-4">Company Management</h1>
-      <CompanyTableClient companies={companies} assets={assets} />
+      <CompanyTableClient companies={companies} assets={assets} employees={employees} />
     </div>
   );
 }

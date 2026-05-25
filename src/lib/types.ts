@@ -5,6 +5,12 @@ export type AssetStatus = 'Available' | 'In Use' | 'In Repair' | 'Decommissioned
 export type Company = {
   id: string;
   name: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  industry?: string;
+  address?: string;
+  taxId?: string;
 };
 
 export type Asset = {
