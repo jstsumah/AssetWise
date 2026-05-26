@@ -3,16 +3,13 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, ActionCodeSettings, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, query, where, getDocs, collection } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { auth, db, storage } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import type { Employee } from '@/lib/types';
 import { useToast } from './use-toast';
 
 interface AuthContextType {
   user: Employee | null;
-  firebaseUser: FirebaseUser | null;
+  firebaseUser: any | null; // Typed as any to prevent type-breaks in components expecting Firebase User object
   login: (email: string, pass: string) => Promise<string | null>;
   signup: (name: string, email: string, pass: string) => Promise<string | null>;
   logout: () => void;
@@ -24,167 +21,194 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function isFirebaseError(error: unknown): error is { code: string } {
-    return typeof error === 'object' && error !== null && 'code' in error;
+function mapEmployeeFromDb(row: any): Employee {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    department: row.department || 'Unassigned',
+    jobTitle: row.jobtitle || 'New Employee',
+    avatarUrl: row.avatarurl || '',
+    role: row.role as 'Admin' | 'Employee',
+    active: !!row.active,
+    companyId: row.companyid || ''
+  };
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<Employee | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   const isAdmin = user?.role === 'Admin';
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setIsLoading(true);
-      if (fbUser) {
-        try {
-          // First try to get by UID (if docs are keyed by UID)
-          let userDoc = await getDoc(doc(db, 'employees', fbUser.uid));
-          let userDocId = fbUser.uid;
+  const handleUserSession = async (session: any) => {
+    const sbUser = session?.user || null;
+    if (sbUser) {
+      try {
+        const { data: employeeData, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('id', sbUser.id)
+          .single();
 
-          // If not found by UID, query by email
-          if (!userDoc.exists() && fbUser.email) {
-            const employeesRef = collection(db, 'employees');
-            const q = query(employeesRef, where('email', '==', fbUser.email));
-            const snapshot = await getDocs(q);
-            
-            if (!snapshot.empty) {
-              userDoc = snapshot.docs[0];
-              userDocId = userDoc.id;
-            }
-          }
-
-          if (userDoc.exists()) {
-            const userData = { id: userDocId, ...userDoc.data() } as Employee;
-            if (userData.active) {
-              setUser(userData);
-              setFirebaseUser(fbUser);
-            } else {
-              // User is not active, sign them out and clear state
-              await signOut(auth);
-              setUser(null);
-              setFirebaseUser(null);
-            }
+        if (employeeData && !error) {
+          const mappedEmployee = mapEmployeeFromDb(employeeData);
+          if (mappedEmployee.active) {
+            setUser(mappedEmployee);
+            setFirebaseUser(sbUser);
           } else {
-            // User document doesn't exist, sign them out and clear state
-            await signOut(auth);
+            await supabase.auth.signOut();
             setUser(null);
             setFirebaseUser(null);
           }
-        } catch (error) {
-           // Error fetching doc, sign out and clear state
-           console.error("Error fetching user document:", error);
-           await signOut(auth);
-           setUser(null);
-           setFirebaseUser(null);
+        } else {
+          await supabase.auth.signOut();
+          setUser(null);
+          setFirebaseUser(null);
         }
-      } else {
-        // No firebase user, clear state
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        await supabase.auth.signOut();
         setUser(null);
         setFirebaseUser(null);
       }
-      // Only set loading to false after all async operations are done
+    } else {
+      setUser(null);
+      setFirebaseUser(null);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    setIsLoading(true);
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleUserSession(session);
+    }).catch(() => {
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      await handleUserSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, pass: string): Promise<string | null> => {
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        const fbUser = userCredential.user;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pass
+      });
 
-        // After successful auth, check Firestore for the user document by UID or email
-        // First try to get by UID (if docs are keyed by UID)
-        let userDoc = await getDoc(doc(db, 'employees', fbUser.uid));
-        let userDocId = fbUser.uid;
-
-        // If not found by UID, query by email
-        if (!userDoc.exists()) {
-            const employeesRef = collection(db, 'employees');
-            const q = query(employeesRef, where('email', '==', email));
-            const snapshot = await getDocs(q);
-            
-            if (snapshot.empty) {
-                await signOut(auth);
-                return 'auth/user-not-found';
-            }
-            
-            userDoc = snapshot.docs[0];
-            userDocId = userDoc.id;
+      if (error) {
+        if (error.status === 400 || error.message.includes('Invalid login credentials')) {
+          return 'auth/invalid-credential';
         }
-
-        if (!userDoc.exists()) {
-            await signOut(auth);
-            return 'auth/user-not-found';
-        }
-
-        const userData = { id: userDocId, ...userDoc.data() } as Employee;
-
-        if (!userData.active) {
-            await signOut(auth);
-            return 'auth/user-not-active';
-        }
-        
-        // If user is active, set the user state.
-        // The onAuthStateChanged listener will also fire but this ensures
-        // the UI updates immediately on login.
-        setUser(userData);
-        setFirebaseUser(fbUser);
-        return null;
-
-    } catch (error) {
-        if (isFirebaseError(error)) {
-            return error.code;
-        }
-        console.error("Unknown login error:", error);
         return 'auth/unknown-error';
+      }
+
+      const sbUser = data.user;
+      if (!sbUser) {
+        return 'auth/user-not-found';
+      }
+
+      const { data: employeeData, error: dbError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', sbUser.id)
+        .single();
+
+      if (dbError || !employeeData) {
+        await supabase.auth.signOut();
+        return 'auth/user-not-found';
+      }
+
+      const mappedEmployee = mapEmployeeFromDb(employeeData);
+
+      if (!mappedEmployee.active) {
+        await supabase.auth.signOut();
+        return 'auth/user-not-active';
+      }
+
+      setUser(mappedEmployee);
+      setFirebaseUser(sbUser);
+      return null;
+    } catch (error) {
+      console.error("Unknown login error:", error);
+      return 'auth/unknown-error';
     }
   };
 
   const signup = async (name: string, email: string, pass: string): Promise<string | null> => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      const newUser = userCredential.user;
-
-      const newEmployeeData: Omit<Employee, 'id'> = {
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        department: 'Unassigned',
-        jobTitle: 'New Employee',
-        avatarUrl: '',
-        role: 'Employee',
-        active: false,
-        companyId: '',
-      };
-      
-      await setDoc(doc(db, 'employees', newUser.uid), newEmployeeData);
-      
+        password: pass,
+        options: {
+          data: {
+            name: name
+          }
+        }
+      });
+
+      if (error) {
+        if (error.message.includes('already registered') || error.status === 422) {
+          return 'auth/email-already-in-use';
+        }
+        return 'auth/unknown-error';
+      }
+
+      const newUser = data.user;
+      if (!newUser) {
+        return 'auth/unknown-error';
+      }
+
+      const { error: dbError } = await supabase
+        .from('employees')
+        .insert({
+          id: newUser.id,
+          name,
+          email,
+          department: 'Unassigned',
+          jobtitle: 'New Employee',
+          avatarurl: '',
+          role: 'Employee',
+          active: false,
+          companyid: null
+        });
+
+      if (dbError) {
+        console.error("Failed to create employee database record:", dbError);
+        return 'auth/unknown-error';
+      }
+
       toast({
         title: 'Account Created!',
         description: 'Your account is now pending activation by an administrator.',
         duration: 9000,
       });
 
-      await signOut(auth);
+      await supabase.auth.signOut();
       router.push('/login');
       return null;
     } catch (error) {
-      if (isFirebaseError(error)) {
-        return error.code;
-      }
-      console.error("Unknown signup error:", error)
+      console.error("Unknown signup error:", error);
       return 'auth/unknown-error';
     }
-  }
+  };
 
   const logout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
+    setUser(null);
+    setFirebaseUser(null);
   };
 
   const resetPassword = async (email: string): Promise<string | null> => {
@@ -194,17 +218,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         typeof window !== 'undefined'
           ? window.location.origin
           : process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:9002';
-      const actionCodeSettings: ActionCodeSettings = {
-        url: `${origin}/reset-password`,
-        handleCodeInApp: true,
-      };
-      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error(`[Auth] Password reset error:`, error);
+        return 'auth/unknown-error';
+      }
       return null;
     } catch (error) {
-      if (isFirebaseError(error)) {
-        console.error(`[Auth] Password reset error (${error.code}):`, error);
-        return error.code;
-      }
       console.error("Unknown password reset error:", error);
       return 'auth/unknown-error';
     }
@@ -219,13 +243,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       return;
     }
-    
-    const userDocRef = doc(db, 'employees', user.id);
-    
+
     try {
-      const updateData = { ...data };
-      await updateDoc(userDocRef, updateData);
-      setUser(prevUser => prevUser ? { ...prevUser, ...updateData } as Employee : null);
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.jobTitle !== undefined) updateData.jobtitle = data.jobTitle;
+      if (data.department !== undefined) updateData.department = data.department;
+
+      const { error } = await supabase
+        .from('employees')
+        .update(updateData)
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setUser(prevUser => prevUser ? { ...prevUser, ...data } as Employee : null);
       toast({
         title: 'Profile Updated!',
         description: 'Your information has been successfully updated.',

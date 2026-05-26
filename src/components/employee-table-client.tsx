@@ -227,7 +227,7 @@ export function EmployeeTableClient({
       await deleteEmployee(selectedEmployee.id);
       toast({
         title: 'Employee Deleted',
-        description: `${selectedEmployee.name} has been removed. You may need to delete them from Firebase Authentication manually.`
+        description: `${selectedEmployee.name} has been removed. You may need to delete them from Supabase Authentication manually.`
       });
       refreshData();
     } catch (error) {
@@ -639,7 +639,7 @@ export function EmployeeTableClient({
                 <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the employee record for {selectedEmployee?.name}. You may also need to delete them from Firebase Authentication.
+                    This action cannot be undone. This will permanently delete the employee record for {selectedEmployee?.name}. You may also need to delete them from Supabase Authentication.
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

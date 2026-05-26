@@ -93,7 +93,7 @@ export function ForgotPasswordForm() {
         <CardContent className="grid gap-4">
           <Alert>
             <AlertDescription>
-              Please check your email (and spam folder) for a message from Firebase. The link in that email will allow you to reset your password.
+              Please check your email (and spam folder) for a message from Supabase. The link in that email will allow you to reset your password.
             </AlertDescription>
           </Alert>
         </CardContent>

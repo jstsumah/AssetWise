@@ -65,7 +65,7 @@ export function EmployeeForm({ onFinished, departments, companies, employee }: {
         await createEmployee(values);
         toast({
             title: "Employee Added!",
-            description: `Successfully added ${values.name} to the system. An email will need to be created in Firebase Authentication for them.`,
+            description: `Successfully added ${values.name} to the system. An email will need to be created in Supabase Authentication for them.`,
         });
       }
       clearCache();

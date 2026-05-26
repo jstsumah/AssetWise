@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 import { LoaderCircle, ArrowLeft, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
-import { confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
+import { supabase } from '@/lib/supabase';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { auth } from '@/lib/firebase';
 
 const formSchema = z
   .object({
@@ -50,8 +49,6 @@ type PageState = 'verifying' | 'ready' | 'invalid' | 'success' | 'submitting';
 
 function ResetPasswordFormInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const oobCode = searchParams.get('oobCode');
 
   const [pageState, setPageState] = useState<PageState>('verifying');
   const [errorMessage, setErrorMessage] = useState('');
@@ -68,48 +65,37 @@ function ResetPasswordFormInner() {
   });
 
   useEffect(() => {
-    if (!oobCode) {
-      setErrorMessage('No reset code found. Please request a new password reset link.');
-      setPageState('invalid');
-      return;
-    }
-
-    verifyPasswordResetCode(auth, oobCode)
-      .then((email) => {
-        setVerifiedEmail(email);
+    supabase.auth.getUser().then(({ data: { user }, error }) => {
+      if (user && !error) {
+        setVerifiedEmail(user.email || '');
         setPageState('ready');
-      })
-      .catch((error) => {
-        const code: string = error?.code ?? '';
-        if (code === 'auth/expired-action-code') {
-          setErrorMessage('This password reset link has expired. Please request a new one.');
-        } else if (code === 'auth/invalid-action-code') {
-          setErrorMessage('This password reset link is invalid or has already been used. Please request a new one.');
-        } else {
-          setErrorMessage('Unable to verify the reset link. Please request a new password reset.');
-        }
+      } else {
+        setErrorMessage('Your password reset link is invalid or has expired. Please request a new reset link.');
         setPageState('invalid');
-      });
-  }, [oobCode]);
+      }
+    }).catch(() => {
+      setErrorMessage('Unable to verify the password reset session. Please try again.');
+      setPageState('invalid');
+    });
+  }, []);
 
   async function onSubmit(values: FormValues) {
-    if (!oobCode) return;
     setPageState('submitting');
 
     try {
-      await confirmPasswordReset(auth, oobCode, values.password);
+      const { error } = await supabase.auth.updateUser({
+        password: values.password
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Sign out the temporary reset session so they can log in normally
+      await supabase.auth.signOut();
       setPageState('success');
     } catch (error: any) {
-      const code: string = error?.code ?? '';
-      let msg = 'Failed to reset your password. Please try again.';
-      if (code === 'auth/expired-action-code') {
-        msg = 'This reset link has expired. Please request a new password reset.';
-      } else if (code === 'auth/invalid-action-code') {
-        msg = 'This reset link is invalid or has already been used. Please request a new one.';
-      } else if (code === 'auth/weak-password') {
-        msg = 'The password is too weak. Please choose a stronger password.';
-      }
-      setErrorMessage(msg);
+      setErrorMessage(error?.message || 'Failed to reset your password. Please try again.');
       setPageState('invalid');
     }
   }
@@ -120,7 +106,7 @@ function ResetPasswordFormInner() {
       <Card>
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Verifying Reset Link</CardTitle>
-          <CardDescription>Please wait while we verify your reset link…</CardDescription>
+          <CardDescription>Please wait while we verify your reset session…</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center py-8">
           <LoaderCircle className="h-10 w-10 animate-spin text-primary" />

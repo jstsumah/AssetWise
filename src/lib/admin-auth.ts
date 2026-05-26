@@ -1,20 +1,4 @@
-import { auth } from './firebase';
-import { sendPasswordResetEmail, ActionCodeSettings } from 'firebase/auth';
-
-/**
- * Build the action code settings that tell Firebase to redirect the reset link
- * to our custom /reset-password page instead of Firebase's default handler.
- */
-function getActionCodeSettings(): ActionCodeSettings {
-  const origin =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:9003';
-  return {
-    url: `${origin}/reset-password`,
-    handleCodeInApp: true,
-  };
-}
+import { supabase } from './supabase';
 
 /**
  * Send a password reset email to a user (admin function)
@@ -25,14 +9,24 @@ function getActionCodeSettings(): ActionCodeSettings {
 export async function adminSendPasswordReset(email: string): Promise<string | null> {
   try {
     console.log(`[AdminAuth] Sending password reset email to: ${email}`);
-    await sendPasswordResetEmail(auth, email, getActionCodeSettings());
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:9002';
+        
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/reset-password`,
+    });
+
+    if (error) {
+      console.error(`[AdminAuth] Failed to send password reset: ${error.message}`);
+      return 'auth/unknown-error';
+    }
     console.log(`[AdminAuth] Password reset email sent successfully to: ${email}`);
     return null;
   } catch (error: any) {
-    const errorCode = error?.code || 'unknown';
-    const errorMessage = error?.message || 'Unknown error';
-    console.error(`[AdminAuth] Failed to send password reset (${errorCode}): ${errorMessage}`);
-    return errorCode;
+    console.error(`[AdminAuth] Unknown error during password reset:`, error);
+    return 'auth/unknown-error';
   }
 }
 
