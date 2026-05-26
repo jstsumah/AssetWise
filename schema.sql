@@ -42,7 +42,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='address') THEN
         ALTER TABLE companies ADD COLUMN address TEXT;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='taxId') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='taxid') THEN
         ALTER TABLE companies ADD COLUMN taxId VARCHAR(100);
     END IF;
 END $$;
@@ -71,7 +71,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name='active') THEN
         ALTER TABLE employees ADD COLUMN active BOOLEAN NOT NULL DEFAULT FALSE;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name='companyId') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='employees' AND column_name='companyid') THEN
         ALTER TABLE employees ADD COLUMN companyId VARCHAR(255);
         ALTER TABLE employees ADD CONSTRAINT fk_employee_company FOREIGN KEY (companyId) REFERENCES companies(id) ON DELETE SET NULL;
     END IF;
@@ -100,10 +100,10 @@ CREATE TABLE IF NOT EXISTS assets (
 -- Safe Column Upgrades for Assets
 DO $$ 
 BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assets' AND column_name='assetValue') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assets' AND column_name='assetvalue') THEN
         ALTER TABLE assets ADD COLUMN assetValue DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assets' AND column_name='companyId') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assets' AND column_name='companyid') THEN
         ALTER TABLE assets ADD COLUMN companyId VARCHAR(255);
         ALTER TABLE assets ADD CONSTRAINT fk_asset_company FOREIGN KEY (companyId) REFERENCES companies(id) ON DELETE CASCADE;
     END IF;
