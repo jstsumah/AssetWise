@@ -45,41 +45,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = user?.role === 'Admin';
 
   const handleUserSession = async (session: any) => {
-    const sbUser = session?.user || null;
-    if (sbUser) {
-      try {
-        const { data: employeeData, error } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('id', sbUser.id)
-          .single();
+    try {
+      const sbUser = session?.user || null;
+      if (sbUser) {
+        try {
+          const { data: employeeData, error } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('id', sbUser.id)
+            .single();
 
-        if (employeeData && !error) {
-          const mappedEmployee = mapEmployeeFromDb(employeeData);
-          if (mappedEmployee.active) {
-            setUser(mappedEmployee);
-            setFirebaseUser(sbUser);
+          if (employeeData && !error) {
+            const mappedEmployee = mapEmployeeFromDb(employeeData);
+            if (mappedEmployee.active) {
+              setUser(mappedEmployee);
+              setFirebaseUser(sbUser);
+            } else {
+              try { await supabase.auth.signOut(); } catch(e) {}
+              setUser(null);
+              setFirebaseUser(null);
+            }
           } else {
-            await supabase.auth.signOut();
+            try { await supabase.auth.signOut(); } catch(e) {}
             setUser(null);
             setFirebaseUser(null);
           }
-        } else {
-          await supabase.auth.signOut();
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          try { await supabase.auth.signOut(); } catch(e) {}
           setUser(null);
           setFirebaseUser(null);
         }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        await supabase.auth.signOut();
+      } else {
         setUser(null);
         setFirebaseUser(null);
       }
-    } else {
-      setUser(null);
-      setFirebaseUser(null);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -171,24 +174,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return 'auth/unknown-error';
       }
 
-      const { error: dbError } = await supabase
-        .from('employees')
-        .insert({
-          id: newUser.id,
-          name,
-          email,
-          department: 'Unassigned',
-          jobtitle: 'New Employee',
-          avatarurl: '',
-          role: 'Employee',
-          active: false,
-          companyid: null
-        });
-
-      if (dbError) {
-        console.error("Failed to create employee database record:", dbError);
-        return 'auth/unknown-error';
-      }
+      // The employee record is now created automatically via a Supabase database trigger
+      // bound to auth.users (handle_new_user). We no longer need to insert it manually.
 
       toast({
         title: 'Account Created!',

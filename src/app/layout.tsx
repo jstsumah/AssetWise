@@ -35,10 +35,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const isAuthPage = pathname === '/login' || pathname === '/signup';
+    const isAuthPage = 
+      pathname === '/login' || 
+      pathname === '/signup' || 
+      pathname === '/forgot-password' || 
+      pathname === '/reset-password';
     
-    // Redirect to home if a logged-in user is trying to access login/signup.
-    if (user && isAuthPage) {
+    // Redirect to home if a logged-in user is trying to access login/signup/forgot-password.
+    // IMPORTANT: Do NOT redirect away from /reset-password, because Supabase's password recovery
+    // mechanism actively logs the user in via a temporary session so they can set a new password.
+    if (user && isAuthPage && pathname !== '/reset-password') {
       router.push('/');
     }
     
@@ -59,7 +65,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = 
+    pathname === '/login' || 
+    pathname === '/signup' || 
+    pathname === '/forgot-password' || 
+    pathname === '/reset-password';
 
   // If there's a user and we're on a protected page, show the app shell.
   if (user && !isAuthPage) {
@@ -71,8 +81,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If there's no user and we are on an auth page, show the auth page content.
-  if (!user && isAuthPage) {
+  // If we are on an auth page and the user is NOT logged in, show the auth page content.
+  // Exception: If they ARE logged in AND on /reset-password, also show it so they can reset their password!
+  if ((!user && isAuthPage) || (user && pathname === '/reset-password')) {
     return (
         <>
             {children}

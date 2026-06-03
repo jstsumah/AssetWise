@@ -65,18 +65,45 @@ function ResetPasswordFormInner() {
   });
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user }, error }) => {
-      if (user && !error) {
+    // 1. Check if the session is already established
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
         setVerifiedEmail(user.email || '');
         setPageState('ready');
-      } else {
-        setErrorMessage('Your password reset link is invalid or has expired. Please request a new reset link.');
-        setPageState('invalid');
       }
-    }).catch(() => {
-      setErrorMessage('Unable to verify the password reset session. Please try again.');
-      setPageState('invalid');
     });
+
+    // 2. Listen for the recovery event from the URL hash
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setVerifiedEmail(session?.user?.email || '');
+        setPageState('ready');
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        setPageState((prev) => {
+          if (prev === 'verifying') {
+            setVerifiedEmail(session.user.email || '');
+            return 'ready';
+          }
+          return prev;
+        });
+      }
+    });
+
+    // 3. Set a timeout just in case the link is actually broken
+    const timer = setTimeout(() => {
+      setPageState((prev) => {
+        if (prev === 'verifying') {
+          setErrorMessage('Your password reset link is invalid or has expired. Please request a new reset link.');
+          return 'invalid';
+        }
+        return prev;
+      });
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   async function onSubmit(values: FormValues) {

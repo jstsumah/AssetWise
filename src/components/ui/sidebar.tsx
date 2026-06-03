@@ -276,37 +276,44 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   Omit<ButtonProps, "children">
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, state, side } = useSidebar()
+  const { toggleSidebar, state, side, isMobile } = useSidebar()
   const Icon = side === "right" ? PanelRight : PanelLeft
 
   return (
-    <Button
-      ref={ref}
-      data-sidebar="trigger"
-      variant="ghost"
-      size="icon"
-      className={cn(
-        "group-data-[collapsible=icon]/sidebar-wrapper:absolute group-data-[collapsible=icon]/sidebar-wrapper:left-1/2 group-data-[collapsible=icon]/sidebar-wrapper:top-2.5 group-data-[collapsible=icon]/sidebar-wrapper:z-50 group-data-[collapsible=icon]/sidebar-wrapper:-translate-x-1/2",
-        "group-data-[state=expanded]/sidebar-wrapper:relative group-data-[state=expanded]/sidebar-wrapper:left-auto group-data-[state=expanded]/sidebar-wrapper:top-auto group-data-[state=expanded]/sidebar-wrapper:translate-x-0 group-data-[state=expanded]/sidebar-wrapper:self-end",
-        "group-data-[state=expanded]/sidebar-wrapper:hover:bg-sidebar-accent group-data-[state=expanded]/sidebar-wrapper:hover:text-sidebar-accent-foreground",
-        "[[data-sidebar=footer]_&]:my-auto",
-        className
-      )}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      {...props}
-    >
-      <Icon
-        className={cn(
-          "duration-200",
-          state === "expanded" && side === "right" && "rotate-180",
-          state === "expanded" && side === "left" && "rotate-180"
-        )}
-      />
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          ref={ref}
+          data-sidebar="trigger"
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "group-data-[collapsible=icon]/sidebar-wrapper:absolute group-data-[collapsible=icon]/sidebar-wrapper:left-1/2 group-data-[collapsible=icon]/sidebar-wrapper:top-2.5 group-data-[collapsible=icon]/sidebar-wrapper:z-50 group-data-[collapsible=icon]/sidebar-wrapper:-translate-x-1/2",
+            "group-data-[state=expanded]/sidebar-wrapper:relative group-data-[state=expanded]/sidebar-wrapper:left-auto group-data-[state=expanded]/sidebar-wrapper:top-auto group-data-[state=expanded]/sidebar-wrapper:translate-x-0 group-data-[state=expanded]/sidebar-wrapper:self-end",
+            "group-data-[state=expanded]/sidebar-wrapper:hover:bg-sidebar-accent group-data-[state=expanded]/sidebar-wrapper:hover:text-sidebar-accent-foreground",
+            "[[data-sidebar=footer]_&]:my-auto",
+            className
+          )}
+          onClick={(event) => {
+            onClick?.(event)
+            toggleSidebar()
+          }}
+          {...props}
+        >
+          <Icon
+            className={cn(
+              "duration-200",
+              state === "expanded" && side === "right" && "rotate-180",
+              state === "expanded" && side === "left" && "rotate-180"
+            )}
+          />
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="center" hidden={isMobile}>
+        Toggle Sidebar
+      </TooltipContent>
+    </Tooltip>
   )
 })
 SidebarTrigger.displayName = "SidebarTrigger"
@@ -620,7 +627,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={isMobile}
           {...tooltip}
         />
       </Tooltip>
