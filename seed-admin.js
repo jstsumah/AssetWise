@@ -1,19 +1,11 @@
 /**
  * AssetWise — Admin Seed Script
- *
- * This script creates your first admin account in Supabase.
+ * Creates the first admin user directly via Supabase Auth + RLS-allowed insert.
+ * No service role key required.
  *
  * Usage:
- *   node seed-admin.js --email=admin@example.com --password=YourPassword123! --name="Your Name"
- *
- * IMPORTANT: Before running, you must first run bootstrap.sql in the
- * Supabase SQL Editor to install the auth trigger and default company.
- *
- * Steps:
- *   1. Run bootstrap.sql in Supabase → SQL Editor
- *   2. Run: node seed-admin.js --email=... --password=... --name=...
- *   3. Go to Supabase → SQL Editor and run the UPDATE printed at the end
- *   4. Log in at http://localhost:9002/login
+ *   node --env-file=.env seed-admin.js
+ *   node --env-file=.env seed-admin.js --email=you@example.com --password=Pass123! --name="Your Name"
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -30,59 +22,61 @@ const email    = args.email    || 'admin@assetwise.com';
 const password = args.password || 'Admin1234!';
 const name     = args.name     || 'Admin User';
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
   console.error('❌  Missing Supabase env vars. Run with: node --env-file=.env seed-admin.js');
   process.exit(1);
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
-  console.log(`\n🚀  AssetWise Admin Seed Script`);
-  console.log(`─────────────────────────────────`);
-  console.log(`   Email   : ${email}`);
-  console.log(`   Name    : ${name}`);
-  console.log(`─────────────────────────────────\n`);
+  console.log('\n🚀  AssetWise — Admin Seed Script');
+  console.log('══════════════════════════════════');
+  console.log(`  Email    : ${email}`);
+  console.log(`  Name     : ${name}`);
+  console.log('══════════════════════════════════\n');
 
-  // Step 1: Sign up the user via Supabase Auth
-  console.log('1️⃣   Creating Supabase auth user...');
+  // ── 1. Sign up ────────────────────────────────────────────────────────────
+  process.stdout.write('1. Creating Supabase auth user... ');
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { name } }
   });
 
+  let userId;
+
   if (signUpError) {
     if (signUpError.message.toLowerCase().includes('already registered')) {
-      console.log('   ℹ️   User already exists in Supabase Auth — continuing...');
+      console.log('already exists, continuing.');
     } else {
-      console.error('   ❌  Sign-up failed:', signUpError.message);
-      console.error('\n   → Make sure you have run bootstrap.sql in Supabase SQL Editor first.');
+      console.error('\n❌  Sign-up failed:', signUpError.message);
       process.exit(1);
     }
   } else {
-    console.log('   ✅  Auth user created:', signUpData.user?.id);
+    userId = signUpData.user?.id;
+    console.log('✅');
   }
 
-  // Step 2: Sign in to get a session (so we can insert with RLS)
-  console.log('\n2️⃣   Signing in to get session...');
+  // ── 2. Sign in ────────────────────────────────────────────────────────────
+  process.stdout.write('2. Signing in to get session...   ');
   const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
   if (signInError) {
-    console.error('   ❌  Sign-in failed:', signInError.message);
-    console.log('\n   → If email confirmation is required, disable it in:');
-    console.log('      Supabase Dashboard → Authentication → Providers → Email → uncheck "Confirm email"');
+    console.error('\n❌  Sign-in failed:', signInError.message);
+    console.log('\n   If email confirmation is enabled, disable it in:');
+    console.log('   Supabase → Authentication → Providers → Email → uncheck "Confirm email"');
     process.exit(1);
   }
 
-  const userId = signInData.user?.id;
-  console.log('   ✅  Signed in as:', userId);
+  userId = signInData.user.id;
+  console.log('✅');
 
-  // Step 3: Check if employee record was created by trigger
-  console.log('\n3️⃣   Checking for employee record (created by trigger)...');
+  // ── 3. Check / create employee record ─────────────────────────────────────
+  process.stdout.write('3. Checking employee record...    ');
   const { data: existing } = await supabase
     .from('employees')
     .select('id, email, active, role')
@@ -90,55 +84,89 @@ async function run() {
     .single();
 
   if (existing) {
-    console.log('   ✅  Employee record exists:', existing);
+    console.log(`found (active=${existing.active}, role=${existing.role})`);
 
-    if (existing.active && existing.role === 'Admin') {
-      console.log('\n🎉  Done! You are already an active admin. Log in at http://localhost:9002/login\n');
-      return;
+    if (!existing.active || existing.role !== 'Admin') {
+      process.stdout.write('   Promoting to active Admin...    ');
+      const { error: updateError } = await supabase
+        .from('employees')
+        .update({ active: true, role: 'Admin' })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('\n❌  Update failed:', updateError.message);
+        console.log('\n   → Run this SQL in Supabase Dashboard → SQL Editor:');
+        printManualSQL(email);
+      } else {
+        console.log('✅');
+      }
+    } else {
+      console.log('   Already active Admin — nothing to do.');
     }
   } else {
-    console.log('   ⚠️   No employee record found — trigger may not be installed.');
-    console.log('   → Inserting employee record manually...');
-
+    console.log('not found, inserting...');
+    process.stdout.write('   Inserting admin employee record... ');
     const { error: insertError } = await supabase
       .from('employees')
       .insert({
-        id: userId,
+        id:         userId,
         name,
         email,
         department: 'Management',
-        jobtitle: 'System Administrator',
-        avatarurl: '',
-        role: 'Employee',
-        active: false,
-        companyid: 'default-company'
+        jobtitle:   'System Administrator',
+        avatarurl:  '',
+        role:       'Admin',
+        active:     true,
+        companyid:  null
       });
 
     if (insertError) {
-      console.error('   ❌  Insert failed:', insertError.message);
+      console.error('\n❌  Insert failed:', insertError.message);
+      console.log('\n   → Run this SQL in Supabase Dashboard → SQL Editor:');
+      printManualSQL(email, userId);
+      await supabase.auth.signOut();
+      process.exit(1);
     } else {
-      console.log('   ✅  Employee record inserted.');
+      console.log('✅');
     }
   }
 
-  // Step 4: Print the SQL to activate them as admin
-  console.log('\n4️⃣   ⚠️  One final manual step required:');
-  console.log('─────────────────────────────────────────────────────');
-  console.log('   Go to: Supabase Dashboard → SQL Editor → New Query');
-  console.log('   Paste and run this SQL:\n');
-  console.log(`UPDATE public.employees`);
-  console.log(`SET`);
-  console.log(`  active    = true,`);
-  console.log(`  role      = 'Admin',`);
-  console.log(`  companyid = 'default-company'`);
-  console.log(`WHERE email = '${email}';\n`);
-  console.log('─────────────────────────────────────────────────────');
-  console.log('\n   Then log in at: http://localhost:9002/login\n');
+  // ── 4. Verify ─────────────────────────────────────────────────────────────
+  process.stdout.write('4. Verifying final state...       ');
+  const { data: final, error: finalError } = await supabase
+    .from('employees')
+    .select('id, name, email, role, active')
+    .eq('id', userId)
+    .single();
 
   await supabase.auth.signOut();
+
+  if (finalError || !final) {
+    console.error('\n❌  Could not verify record:', finalError?.message);
+    process.exit(1);
+  }
+
+  console.log('✅\n');
+  console.log('══════════════════════════════════');
+  console.log('  ✅  Admin account ready!');
+  console.log(`  Name   : ${final.name}`);
+  console.log(`  Email  : ${final.email}`);
+  console.log(`  Role   : ${final.role}`);
+  console.log(`  Active : ${final.active}`);
+  console.log('══════════════════════════════════');
+  console.log('\n  👉  Log in at: http://localhost:9002/login');
+  console.log('  📝  Note: Create a Company first in the UI to assign employees.\n');
+}
+
+function printManualSQL(email, id) {
+  console.log(`
+  INSERT INTO public.employees (id, name, email, department, jobtitle, avatarurl, role, active)
+  VALUES ('${id || '<YOUR_AUTH_USER_ID>'}', 'Admin User', '${email}', 'Management', 'System Administrator', '', 'Admin', true)
+  ON CONFLICT (id) DO UPDATE SET role = 'Admin', active = true;
+  `);
 }
 
 run().catch(err => {
-  console.error('Unexpected error:', err);
+  console.error('Unexpected error:', err.message);
   process.exit(1);
 });
