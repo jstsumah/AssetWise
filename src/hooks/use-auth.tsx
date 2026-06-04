@@ -66,6 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setFirebaseUser(null);
             }
           } else {
+            // Profile not found in employees table — user signed up but admin hasn't
+            // activated them yet, OR the DB trigger hasn't run.
+            console.warn('[Auth] No employee profile found for user:', sbUser.email, '| Error:', error?.message);
             try { await supabase.auth.signOut(); } catch(e) {}
             setUser(null);
             setFirebaseUser(null);
@@ -87,14 +90,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     setIsLoading(true);
-    
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleUserSession(session);
-    }).catch(() => {
-      setIsLoading(false);
-    });
 
+    // onAuthStateChange fires INITIAL_SESSION immediately on mount, which handles
+    // the initial session check. Using getSession() separately causes a race condition
+    // where handleUserSession is called twice simultaneously, breaking isLoading state.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       await handleUserSession(session);
     });
