@@ -229,6 +229,24 @@ export const createEmployee = async (data: Omit<Employee, 'id' | 'avatarUrl' | '
 };
 
 export const deleteEmployee = async (employeeId: string) => {
+    // 1. Delete from Supabase Auth (requires service role key on the server)
+    try {
+      const res = await fetch('/api/auth/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: employeeId })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        console.error("[Data] Failed to delete auth user:", data.error);
+        // We'll continue to delete the employee record even if auth deletion fails
+        // (e.g., if SUPABASE_SERVICE_ROLE_KEY is missing), but ideally both succeed.
+      }
+    } catch (err) {
+      console.error("[Data] Failed to call delete-user API:", err);
+    }
+
+    // 2. Delete from public.employees
     const { error } = await supabase.from('employees').delete().eq('id', employeeId);
     if (error) throw error;
     clearCache();
