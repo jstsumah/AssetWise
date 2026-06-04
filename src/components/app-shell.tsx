@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Briefcase,
   Home,
-  Download,
   Settings,
   Users,
   Search,
@@ -51,7 +50,7 @@ const adminNavItems = [
   { href: '/assets', icon: Briefcase, label: 'Assets' },
   { href: '/employees', icon: Users, label: 'Employees' },
   { href: '/companies', icon: Building, label: 'Companies'},
-  { href: '/reports', icon: Download, label: 'Reports' },
+
   { href: '/vault', icon: KeyRound, label: 'Vault' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
