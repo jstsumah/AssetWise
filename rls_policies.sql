@@ -41,7 +41,7 @@ CREATE POLICY "employees_update" ON employees
       SELECT 1 FROM employees AS me
       WHERE me.id = (auth.uid())::text
         AND me.role = 'Admin'
-        AND me.companyid = employees.companyid
+        AND (me.companyid = employees.companyid OR employees.companyid IS NULL)
     )
   );
 
@@ -52,7 +52,7 @@ CREATE POLICY "employees_delete_admin" ON employees
       SELECT 1 FROM employees AS me
       WHERE me.id = (auth.uid())::text
         AND me.role = 'Admin'
-        AND me.companyid = employees.companyid
+        AND (me.companyid = employees.companyid OR employees.companyid IS NULL)
     )
   );
 
