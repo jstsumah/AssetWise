@@ -41,7 +41,6 @@ CREATE POLICY "employees_update" ON employees
       SELECT 1 FROM employees AS me
       WHERE me.id = (auth.uid())::text
         AND me.role = 'Admin'
-        AND (me.companyid = employees.companyid OR employees.companyid IS NULL)
     )
   );
 
@@ -87,7 +86,6 @@ CREATE POLICY "companies_update" ON companies
       SELECT 1 FROM employees
       WHERE id = (auth.uid())::text
         AND role = 'Admin'
-        AND companyid = companies.id
     )
   );
 
@@ -135,7 +133,6 @@ CREATE POLICY "assets_update" ON assets
       SELECT 1 FROM employees
       WHERE id = (auth.uid())::text
         AND role = 'Admin'
-        AND companyid = assets.companyid
     )
   );
 
@@ -204,7 +201,6 @@ CREATE POLICY "vault_update" ON vault
       SELECT 1 FROM employees
       WHERE id = (auth.uid())::text
         AND role = 'Admin'
-        AND companyid = vault.companyid
     )
   );
 

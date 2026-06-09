@@ -535,7 +535,15 @@ function EntryDialog({ open, editEntry, cryptoKey, onClose, onSaved, defaultCate
   };
 
   const onSubmit = async (values: FormValues) => {
-    if (!user || !cryptoKey) return;
+    if (!user) return;
+    if (!cryptoKey) {
+      toast({ 
+        title: 'Encryption Error', 
+        description: 'Encryption key is missing. Please make sure you are assigned to a company.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
     setSaving(true);
     try {
       const { encryptedPassword, iv } = await encryptPassword(values.password, cryptoKey);
