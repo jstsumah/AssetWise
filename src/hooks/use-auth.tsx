@@ -89,16 +89,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    let mounted = true;
     setIsLoading(true);
 
-    // onAuthStateChange fires INITIAL_SESSION immediately on mount, which handles
-    // the initial session check. Using getSession() separately causes a race condition
-    // where handleUserSession is called twice simultaneously, breaking isLoading state.
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          await handleUserSession(session);
+        }
+      } catch (error) {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      await handleUserSession(session);
+      if (event === 'INITIAL_SESSION') return;
+      if (mounted) {
+        await handleUserSession(session);
+      }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
