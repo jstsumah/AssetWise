@@ -57,11 +57,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (employeeData && !error) {
             const mappedEmployee = mapEmployeeFromDb(employeeData);
+            const isResetPasswordPage = typeof window !== 'undefined' && window.location.pathname === '/reset-password';
+            
             if (mappedEmployee.active) {
               setUser(mappedEmployee);
               setFirebaseUser(sbUser);
-            } else {
+            } else if (!isResetPasswordPage) {
               try { await supabase.auth.signOut(); } catch(e) {}
+              setUser(null);
+              setFirebaseUser(null);
+            } else {
+              // They are inactive, but on the reset password page.
+              // Don't sign them out so they can complete the flow.
               setUser(null);
               setFirebaseUser(null);
             }
@@ -69,7 +76,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Profile not found in employees table — user signed up but admin hasn't
             // activated them yet, OR the DB trigger hasn't run.
             console.warn('[Auth] No employee profile found for user:', sbUser.email, '| Error:', error?.message);
-            try { await supabase.auth.signOut(); } catch(e) {}
+            const isResetPasswordPage = typeof window !== 'undefined' && window.location.pathname === '/reset-password';
+            if (!isResetPasswordPage) {
+              try { await supabase.auth.signOut(); } catch(e) {}
+            }
             setUser(null);
             setFirebaseUser(null);
           }
