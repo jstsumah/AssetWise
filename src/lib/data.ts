@@ -221,10 +221,50 @@ export const updateEmployee = async (employeeId: string, data: Partial<Omit<Empl
 };
 
 export const createEmployee = async (data: Omit<Employee, 'id' | 'avatarUrl' | 'active'>) => {
-    const newId = Math.random().toString(36).substring(2, 15);
-    const dbData = mapEmployeeToDb({ ...data, avatarUrl: '', active: false });
-    const { error } = await supabase.from('employees').insert({ id: newId, ...dbData });
-    if (error) throw error;
+    // Step 1 — check if this email already exists in Supabase Auth (requires service-role via API route)
+    let authUserId: string | null = null;
+    try {
+        const res = await fetch('/api/auth/lookup-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: data.email }),
+        });
+        if (res.ok) {
+            const payload = await res.json();
+            if (payload.found) {
+                authUserId = payload.userId as string;
+            }
+        }
+    } catch (err) {
+        // If the lookup fails (e.g. no service-role key), fall through to the original behaviour
+        console.warn('[createEmployee] Auth lookup failed, proceeding without it:', err);
+    }
+
+    if (authUserId) {
+        // Step 2a — Auth user exists; check if an employee profile already exists too
+        const { data: existing } = await supabase
+            .from('employees')
+            .select('id')
+            .eq('id', authUserId)
+            .maybeSingle();
+
+        if (existing) {
+            // Both auth and profile exist → surface a "suggest login" error
+            throw new Error('EMAIL_ALREADY_EXISTS');
+        }
+
+        // Step 2b — Auth exists but no profile → insert the profile using the auth UUID
+        const dbData = mapEmployeeToDb({ ...data, avatarUrl: '', active: false });
+        const { error } = await supabase.from('employees').insert({ id: authUserId, ...dbData });
+        if (error) throw error;
+    } else {
+        // Step 3 — Not in auth at all → original behaviour (admin will create auth account separately)
+        const newId = Math.random().toString(36).substring(2, 15);
+        const dbData = mapEmployeeToDb({ ...data, avatarUrl: '', active: false });
+        const { error } = await supabase.from('employees').insert({ id: newId, ...dbData });
+        if (error) throw error;
+    }
+
     clearCache();
 };
 

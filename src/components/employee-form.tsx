@@ -65,18 +65,26 @@ export function EmployeeForm({ onFinished, departments, companies, employee }: {
         await createEmployee(values);
         toast({
             title: "Employee Added!",
-            description: `Successfully added ${values.name} to the system. An email will need to be created in Supabase Authentication for them.`,
+            description: `${values.name} has been added. Their authentication account already exists — just activate their profile to grant access.`,
         });
       }
       clearCache();
       refreshData();
       onFinished();
-    } catch (error) {
-       toast({
-        title: isEditing ? "Update Failed" : "Creation Failed",
-        description: `Could not save ${values.name}. Please try again.`,
-        variant: "destructive"
-      })
+    } catch (error: any) {
+      if (error?.message === 'EMAIL_ALREADY_EXISTS') {
+        toast({
+          title: "Email Already Registered",
+          description: `${values.email} already exists in the system. Please ask the user to log in instead.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: isEditing ? "Update Failed" : "Creation Failed",
+          description: `Could not save ${values.name}. Please try again.`,
+          variant: "destructive",
+        });
+      }
     } finally {
         setIsSaving(false);
     }
