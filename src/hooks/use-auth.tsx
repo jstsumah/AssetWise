@@ -117,10 +117,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') return;
       if (mounted) {
-        await handleUserSession(session);
+        setTimeout(() => {
+          if (mounted) handleUserSession(session);
+        }, 0);
       }
     });
 
