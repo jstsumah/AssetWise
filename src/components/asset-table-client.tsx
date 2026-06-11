@@ -18,7 +18,7 @@ import {
   HelpCircle,
   Eye,
 } from 'lucide-react';
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import type {
@@ -82,7 +82,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { RegisterAssetForm } from './register-asset-form';
-import { updateAsset, clearCache } from '@/lib/data';
+import { updateAsset, clearCache, importAssets } from '@/lib/data';
+import type { ImportResult } from '@/lib/data';
 import { useDataRefresh } from '@/hooks/use-data-refresh';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -125,20 +126,30 @@ export function AssetTableClient({
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Import assets from CSV
-  const importFromCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Import assets from Excel/CSV
+  const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      complete: async (results) => {
-        toast({ title: 'Import Complete', description: `${results.data.length} assets imported (demo only).` });
-      },
-      error: (error) => {
-        toast({ title: 'Import Failed', description: error.message, variant: 'destructive' });
-      }
-    });
-    event.target.value = '';
+    setIsImporting(true);
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, string>[];
+
+      // Filter out completely empty rows
+      const nonEmptyRows = rows.filter(row => Object.values(row).some(val => val !== ''));
+
+      const result = await importAssets(nonEmptyRows, companies);
+      setImportResult(result);
+      refreshData();
+    } catch (err: any) {
+      toast({ title: 'Import Failed', description: err?.message || 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      event.target.value = '';
+    }
   };
   
   const [selectedAsset, setSelectedAsset] = React.useState<Asset | null>(null);
@@ -146,6 +157,8 @@ export function AssetTableClient({
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const [isAssignOpen, setIsAssignOpen] = React.useState(false);
   const [isDecommissionOpen, setIsDecommissionOpen] = React.useState(false);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
 
   const getCompanyById = (id: string): Company | undefined => companies.find(c => c.id === id);
   const getEmployeeById = (id: string): Employee | undefined => employees.find(e => e.id === id);
@@ -427,7 +440,7 @@ export function AssetTableClient({
     },
   });
 
-  const exportToCsv = () => {
+  const exportToExcel = () => {
     const dataToExport = table.getFilteredRowModel().rows.map(row => {
         const asset = row.original;
         const company = getCompanyById(asset.companyId);
@@ -438,27 +451,19 @@ export function AssetTableClient({
             'Category': asset.category,
             'Brand': asset.brand,
             'Model': asset.model,
-            'Company': company?.name,
+            'Company': company?.name || '',
             'Status': asset.status,
             'Assigned To': assignedTo,
             'Purchase Date': asset.purchaseDate,
             'Asset Value': asset.assetValue,
-            'Remarks': asset.remarks,
+            'Remarks': asset.remarks || '',
         };
     });
 
-    const csv = Papa.unparse(dataToExport);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'assets.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Assets');
+    XLSX.writeFile(workbook, 'assets.xlsx');
   }
 
   return (
@@ -497,14 +502,14 @@ export function AssetTableClient({
                 ))}
               </SelectContent>
             </Select>
-            <Button className="w-full md:w-auto" variant="outline" onClick={exportToCsv}>
+            <Button className="w-full md:w-auto" variant="outline" onClick={exportToExcel}>
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
             <label className="w-full md:w-auto">
-              <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importFromCsv} />
-              <Button asChild variant="outline">
-                <span>Import</span>
+              <input type="file" accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={importData} disabled={isImporting} />
+              <Button asChild variant="outline" disabled={isImporting}>
+                <span>{isImporting ? 'Importing…' : 'Import'}</span>
               </Button>
             </label>
             <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
@@ -689,6 +694,39 @@ export function AssetTableClient({
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+
+    {/* Import Result Summary Dialog */}
+    <Dialog open={!!importResult} onOpenChange={(open) => { if (!open) setImportResult(null); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Import Complete</DialogTitle>
+          <DialogDescription>
+            {importResult?.inserted} inserted · {importResult?.skipped} skipped · {importResult?.failed} failed
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 max-h-64 overflow-y-auto text-sm">
+          {(importResult?.skippedRows?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-semibold text-yellow-600 mb-1">Skipped (already exist)</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                {importResult?.skippedRows.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </div>
+          )}
+          {(importResult?.failedRows?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-semibold text-destructive mb-1">Failed</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                {importResult?.failedRows.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </div>
+          )}
+          {(importResult?.skippedRows?.length ?? 0) === 0 && (importResult?.failedRows?.length ?? 0) === 0 && (
+            <p className="text-muted-foreground">All rows were imported successfully.</p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

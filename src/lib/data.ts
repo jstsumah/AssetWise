@@ -434,3 +434,211 @@ export const deleteVaultEntry = async (entryId: string): Promise<void> => {
     const { error } = await supabase.from('vault').delete().eq('id', entryId);
     if (error) throw error;
 };
+
+// ─── Bulk Import ──────────────────────────────────────────────────────────────
+
+export type ImportResult = {
+    inserted: number;
+    skipped: number;
+    failed: number;
+    skippedRows: string[];   // human-readable reason per skipped row
+    failedRows: string[];    // human-readable reason per failed row
+};
+
+// Expected CSV columns (case-insensitive match):
+//   Name, Email, Department, Job Title, Role, Company
+export const importEmployees = async (
+    rows: Record<string, string>[],
+    companies: Company[]
+): Promise<ImportResult> => {
+    const result: ImportResult = { inserted: 0, skipped: 0, failed: 0, skippedRows: [], failedRows: [] };
+
+    // Fetch existing emails to avoid repeated DB calls
+    const existing = await getEmployees();
+    const existingEmails = new Set(existing.map(e => e.email.toLowerCase()));
+
+    const companyNameMap = new Map(companies.map(c => [c.name.toLowerCase(), c.id]));
+
+    for (const row of rows) {
+        const name      = (row['Name']       || row['name']        || '').trim();
+        const email     = (row['Email']      || row['email']       || '').trim().toLowerCase();
+        const department= (row['Department'] || row['department']  || '').trim();
+        const jobTitle  = (row['Job Title']  || row['job title']   || row['jobTitle'] || '').trim();
+        const roleRaw   = (row['Role']       || row['role']        || 'Employee').trim();
+        const companyName=(row['Company']    || row['company']     || '').trim();
+
+        // Validate required fields
+        if (!name || !email) {
+            result.failed++;
+            result.failedRows.push(`Row skipped — missing name or email (name="${name}", email="${email}")`);
+            continue;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            result.failed++;
+            result.failedRows.push(`"${name}" — invalid email address: ${email}`);
+            continue;
+        }
+
+        // Skip duplicates by email
+        if (existingEmails.has(email)) {
+            result.skipped++;
+            result.skippedRows.push(`"${name}" (${email}) — already exists`);
+            continue;
+        }
+
+        const role = (roleRaw === 'Admin' ? 'Admin' : 'Employee') as 'Admin' | 'Employee';
+        const companyId = companyNameMap.get(companyName.toLowerCase()) || '';
+
+        try {
+            await createEmployee({
+                name,
+                email,
+                department: department || 'Unassigned',
+                jobTitle: jobTitle || 'New Employee',
+                role,
+                companyId,
+            });
+            existingEmails.add(email); // prevent in-batch duplicates
+            result.inserted++;
+        } catch (err: any) {
+            if (err?.message === 'EMAIL_ALREADY_EXISTS') {
+                result.skipped++;
+                result.skippedRows.push(`"${name}" (${email}) — already exists`);
+            } else {
+                result.failed++;
+                result.failedRows.push(`"${name}" (${email}) — ${err?.message || 'unknown error'}`);
+            }
+        }
+    }
+
+    clearCache();
+    return result;
+};
+
+// Expected CSV columns (case-insensitive):
+//   Tag No, Serial Number, Category, Brand, Model, Company, Purchase Date, Asset Value, Remarks
+export const importAssets = async (
+    rows: Record<string, string>[],
+    companies: Company[]
+): Promise<ImportResult> => {
+    const result: ImportResult = { inserted: 0, skipped: 0, failed: 0, skippedRows: [], failedRows: [] };
+
+    const existing = await getAssets();
+    const existingSerials = new Set(existing.map(a => a.serialNumber.toLowerCase()));
+    const existingTags    = new Set(existing.map(a => a.tagNo.toLowerCase()));
+
+    const companyNameMap = new Map(companies.map(c => [c.name.toLowerCase(), c.id]));
+    const validCategories = new Set(['Laptop', 'Desktop', 'Phone', 'Tablet', 'Other']);
+
+    for (const row of rows) {
+        const tagNo        = (row['Tag No']        || row['tag no']        || row['tagNo']       || '').trim();
+        const serialNumber = (row['Serial Number'] || row['serial number'] || row['serialNumber']|| '').trim();
+        const categoryRaw  = (row['Category']      || row['category']      || 'Other').trim();
+        const brand        = (row['Brand']         || row['brand']         || '').trim();
+        const model        = (row['Model']         || row['model']         || '').trim();
+        const companyName  = (row['Company']       || row['company']       || '').trim();
+        const purchaseDate = (row['Purchase Date'] || row['purchase date'] || row['purchaseDate']|| '').trim();
+        const assetValueRaw= (row['Asset Value']   || row['asset value']   || row['assetValue']  || '0').trim();
+        const remarks      = (row['Remarks']       || row['remarks']       || '').trim();
+
+        // Validate required fields
+        if (!serialNumber || !brand || !model) {
+            result.failed++;
+            result.failedRows.push(`Row skipped — missing serial number, brand, or model`);
+            continue;
+        }
+
+        // Skip duplicates
+        if (existingSerials.has(serialNumber.toLowerCase())) {
+            result.skipped++;
+            result.skippedRows.push(`Serial "${serialNumber}" — already exists`);
+            continue;
+        }
+        if (tagNo && existingTags.has(tagNo.toLowerCase())) {
+            result.skipped++;
+            result.skippedRows.push(`Tag No "${tagNo}" — already exists`);
+            continue;
+        }
+
+        const category = validCategories.has(categoryRaw) ? categoryRaw as import('./types').AssetCategory : 'Other';
+        const companyId = companyNameMap.get(companyName.toLowerCase()) || '';
+        const assetValue = parseFloat(assetValueRaw.replace(/[^0-9.]/g, '')) || 0;
+
+        if (!companyId) {
+            result.failed++;
+            result.failedRows.push(`Serial "${serialNumber}" — company "${companyName}" not found`);
+            continue;
+        }
+
+        const purchase = purchaseDate || new Date().toISOString().split('T')[0];
+
+        try {
+            await addAsset({
+                serialNumber,
+                tagNo: tagNo || serialNumber,
+                category,
+                brand,
+                model,
+                purchaseDate: purchase,
+                companyId,
+                assetValue,
+                remarks,
+            });
+            existingSerials.add(serialNumber.toLowerCase());
+            if (tagNo) existingTags.add(tagNo.toLowerCase());
+            result.inserted++;
+        } catch (err: any) {
+            result.failed++;
+            result.failedRows.push(`Serial "${serialNumber}" — ${err?.message || 'unknown error'}`);
+        }
+    }
+
+    clearCache();
+    return result;
+};
+
+// Expected CSV columns (case-insensitive):
+//   Name, Website, Email, Phone, Industry, Address, Tax ID
+export const importCompanies = async (
+    rows: Record<string, string>[]
+): Promise<ImportResult> => {
+    const result: ImportResult = { inserted: 0, skipped: 0, failed: 0, skippedRows: [], failedRows: [] };
+
+    const existing = await getCompanies();
+    const existingNames = new Set(existing.map(c => c.name.toLowerCase()));
+
+    for (const row of rows) {
+        const name     = (row['Name']     || row['name']     || '').trim();
+        const website  = (row['Website']  || row['website']  || '').trim();
+        const email    = (row['Email']    || row['email']    || '').trim();
+        const phone    = (row['Phone']    || row['phone']    || '').trim();
+        const industry = (row['Industry'] || row['industry'] || '').trim();
+        const address  = (row['Address']  || row['address']  || '').trim();
+        const taxId    = (row['Tax ID']   || row['tax id']   || row['taxId']  || '').trim();
+
+        if (!name) {
+            result.failed++;
+            result.failedRows.push(`Row skipped — missing company name`);
+            continue;
+        }
+
+        if (existingNames.has(name.toLowerCase())) {
+            result.skipped++;
+            result.skippedRows.push(`"${name}" — already exists`);
+            continue;
+        }
+
+        try {
+            await addCompany({ name, website, email, phone, industry, address, taxId });
+            existingNames.add(name.toLowerCase());
+            result.inserted++;
+        } catch (err: any) {
+            result.failed++;
+            result.failedRows.push(`"${name}" — ${err?.message || 'unknown error'}`);
+        }
+    }
+
+    clearCache();
+    return result;
+};
+

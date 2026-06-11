@@ -1,6 +1,6 @@
 'use client';
 
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import * as React from 'react';
 import {
   Card,
@@ -46,7 +46,8 @@ import {
   ExternalLink 
 } from 'lucide-react';
 import { useDataRefresh } from '@/hooks/use-data-refresh';
-import { deleteCompany } from '@/lib/data';
+import { deleteCompany, importCompanies } from '@/lib/data';
+import type { ImportResult } from '@/lib/data';
 import type { Company, Asset, Employee } from '@/lib/types';
 import { CompanyForm } from '@/components/company-form';
 import { 
@@ -76,10 +77,12 @@ export function CompanyTableClient({
   const [selectedCompany, setSelectedCompany] = React.useState<Company | undefined>(undefined);
   const [isRosterOpen, setIsRosterOpen] = React.useState(false);
   const [rosterCompany, setRosterCompany] = React.useState<Company | undefined>(undefined);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
   const { toast } = useToast();
   
-  // Export companies to CSV including new fields
-  const exportToCsv = () => {
+  // Export companies to Excel to prevent data distortion (e.g. phone numbers)
+  const exportToExcel = () => {
     const dataToExport = companies.map(company => ({
       'Name': company.name,
       'ID': company.id,
@@ -90,37 +93,37 @@ export function CompanyTableClient({
       'Address': company.address || '',
       'Tax ID': company.taxId || '',
     }));
-    const csv = Papa.unparse(dataToExport);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'companies.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
+    XLSX.writeFile(workbook, 'companies.xlsx');
   };
 
-  // Import companies from CSV (Demo logic)
-  const importFromCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Import companies from Excel/CSV
+  const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      complete: async (results) => {
-        toast({ 
-          title: 'Import Complete', 
-          description: `${results.data.length} companies imported (demo only).` 
-        });
-      },
-      error: (error) => {
-        toast({ title: 'Import Failed', description: error.message, variant: 'destructive' });
-      }
-    });
-    event.target.value = '';
+    setIsImporting(true);
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, string>[];
+
+      // Filter out completely empty rows
+      const nonEmptyRows = rows.filter(row => Object.values(row).some(val => val !== ''));
+
+      const result = await importCompanies(nonEmptyRows);
+      setImportResult(result);
+      refreshData();
+    } catch (err: any) {
+      toast({ title: 'Import Failed', description: err?.message || 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      event.target.value = '';
+    }
   };
   
   const openForm = (company?: Company) => {
@@ -194,11 +197,11 @@ export function CompanyTableClient({
                   Add Company
                 </Button>
               </DialogTrigger>
-              <Button variant="outline" onClick={exportToCsv}>Export</Button>
+              <Button variant="outline" onClick={exportToExcel}>Export</Button>
               <label>
-                <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importFromCsv} />
-                <Button asChild variant="outline">
-                  <span>Import</span>
+                <input type="file" accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={importData} disabled={isImporting} />
+                <Button asChild variant="outline" disabled={isImporting}>
+                  <span>{isImporting ? 'Importing…' : 'Import'}</span>
                 </Button>
               </label>
             </div>
@@ -465,6 +468,39 @@ export function CompanyTableClient({
 
         <div className="flex justify-end pt-4 border-t">
           <Button onClick={closeRoster}>Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Import Result Summary Dialog */}
+    <Dialog open={!!importResult} onOpenChange={(open) => { if (!open) setImportResult(null); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Import Complete</DialogTitle>
+          <DialogDescription>
+            {importResult?.inserted} inserted · {importResult?.skipped} skipped · {importResult?.failed} failed
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 max-h-64 overflow-y-auto text-sm">
+          {(importResult?.skippedRows?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-semibold text-yellow-600 mb-1">Skipped (already exist)</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                {importResult?.skippedRows.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </div>
+          )}
+          {(importResult?.failedRows?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-semibold text-destructive mb-1">Failed</p>
+              <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                {importResult?.failedRows.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </div>
+          )}
+          {(importResult?.skippedRows?.length ?? 0) === 0 && (importResult?.failedRows?.length ?? 0) === 0 && (
+            <p className="text-muted-foreground">All rows were imported successfully.</p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

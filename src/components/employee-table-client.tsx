@@ -30,7 +30,7 @@ import {
 } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
-import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -79,7 +79,8 @@ import { SendPasswordResetDialog } from "./send-password-reset-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
-import { clearCache, updateEmployee, deleteEmployee } from "@/lib/data";
+import { clearCache, updateEmployee, deleteEmployee, importEmployees } from "@/lib/data";
+import type { ImportResult } from "@/lib/data";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -106,14 +107,16 @@ export function EmployeeTableClient({
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
   const [isPasswordResetDialogOpen, setIsPasswordResetDialogOpen] = React.useState(false);
   const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | undefined>(undefined);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
   const { toast } = useToast();
 
   const getCompanyById = (id: string) => {
     return companies.find((c) => c.id === id);
   };
 
-  // Export employees to CSV
-  const exportToCsv = () => {
+  // Export employees to Excel
+  const exportToExcel = () => {
     const dataToExport = employees.map((emp: Employee) => {
       const company = getCompanyById(emp.companyId);
       return {
@@ -126,34 +129,36 @@ export function EmployeeTableClient({
         'Status': emp.active ? 'Active' : 'Inactive',
       };
     });
-    const csv = Papa.unparse(dataToExport);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'employees.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Employees');
+    XLSX.writeFile(workbook, 'employees.xlsx');
   };
 
-  // Import employees from CSV
-  const importFromCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Import employees from Excel/CSV
+  const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      complete: async (results) => {
-        toast({ title: 'Import Complete', description: `${results.data.length} employees imported (demo only).` });
-      },
-      error: (error) => {
-        toast({ title: 'Import Failed', description: error.message, variant: 'destructive' });
-      }
-    });
-    event.target.value = '';
+    setIsImporting(true);
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, string>[];
+
+      // Filter out completely empty rows
+      const nonEmptyRows = rows.filter(row => Object.values(row).some(val => val !== ''));
+
+      const result = await importEmployees(nonEmptyRows, companies);
+      setImportResult(result);
+      refreshData();
+    } catch (err: any) {
+      toast({ title: 'Import Failed', description: err?.message || 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      event.target.value = '';
+    }
   };
 
   const openForm = (employee?: Employee) => {
@@ -468,13 +473,13 @@ export function EmployeeTableClient({
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Employee
             </Button>
-            <Button className="w-full md:w-auto" variant="outline" onClick={exportToCsv}>
+            <Button className="w-full md:w-auto" variant="outline" onClick={exportToExcel}>
               Export
             </Button>
             <label className="w-full md:w-auto">
-              <input type="file" accept=".csv" style={{ display: 'none' }} onChange={importFromCsv} />
-              <Button asChild variant="outline">
-                <span>Import</span>
+              <input type="file" accept=".xlsx, .xls, .csv" style={{ display: 'none' }} onChange={importData} disabled={isImporting} />
+              <Button asChild variant="outline" disabled={isImporting}>
+                <span>{isImporting ? 'Importing…' : 'Import'}</span>
               </Button>
             </label>
             <DropdownMenu>
@@ -654,6 +659,39 @@ export function EmployeeTableClient({
           employeeEmail={selectedEmployee?.email || ''}
           employeeName={selectedEmployee?.name || ''}
         />
+
+        {/* Import Result Summary Dialog */}
+        <Dialog open={!!importResult} onOpenChange={(open) => { if (!open) setImportResult(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Import Complete</DialogTitle>
+              <DialogDescription>
+                {importResult?.inserted} inserted · {importResult?.skipped} skipped · {importResult?.failed} failed
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 max-h-64 overflow-y-auto text-sm">
+              {(importResult?.skippedRows?.length ?? 0) > 0 && (
+                <div>
+                  <p className="font-semibold text-yellow-600 mb-1">Skipped (already exist)</p>
+                  <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                    {importResult?.skippedRows.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </div>
+              )}
+              {(importResult?.failedRows?.length ?? 0) > 0 && (
+                <div>
+                  <p className="font-semibold text-destructive mb-1">Failed</p>
+                  <ul className="list-disc pl-4 space-y-0.5 text-muted-foreground">
+                    {importResult?.failedRows.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </div>
+              )}
+              {(importResult?.skippedRows?.length ?? 0) === 0 && (importResult?.failedRows?.length ?? 0) === 0 && (
+                <p className="text-muted-foreground">All rows were imported successfully.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
     </Card>
   );
 }
