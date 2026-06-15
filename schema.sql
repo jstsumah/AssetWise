@@ -158,3 +158,22 @@ CREATE INDEX IF NOT EXISTS idx_vault_company ON vault(companyId);
 CREATE INDEX IF NOT EXISTS idx_vault_owner ON vault(ownerId);
 CREATE INDEX IF NOT EXISTS idx_vault_category ON vault(category);
 CREATE INDEX IF NOT EXISTS idx_password_history_entry ON vault_password_history(vaultEntryId);
+
+-- ─── 7. APP BACKUPS TABLE (JSON ENGINE) ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS app_backups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    file_name VARCHAR(255) NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    record_counts JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(50) NOT NULL DEFAULT 'completed',
+    trigger_type VARCHAR(50) NOT NULL DEFAULT 'manual'
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_backups_created_at ON app_backups(created_at);
+
+-- NOTE: Supabase Storage Buckets ('backups') should be created via the Supabase Dashboard
+-- or via the Storage API. Below is the equivalent raw SQL to insert the bucket if running as superuser:
+-- INSERT INTO storage.buckets (id, name, public) 
+-- VALUES ('backups', 'backups', false) 
+-- ON CONFLICT (id) DO NOTHING;
