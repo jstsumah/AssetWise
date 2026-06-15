@@ -177,3 +177,90 @@ CREATE INDEX IF NOT EXISTS idx_app_backups_created_at ON app_backups(created_at)
 -- INSERT INTO storage.buckets (id, name, public) 
 -- VALUES ('backups', 'backups', false) 
 -- ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================================
+-- Row Level Security (RLS) Policies
+-- This unified block secures all tables and supersedes previous policy patches.
+-- =============================================================================
+
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vault ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_password_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_backups ENABLE ROW LEVEL SECURITY;
+
+-- ─── 1. EMPLOYEES ────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "employees_select" ON employees;
+DROP POLICY IF EXISTS "employees_insert_own" ON employees;
+DROP POLICY IF EXISTS "employees_insert_self" ON employees;
+DROP POLICY IF EXISTS "employees_insert_admin" ON employees;
+DROP POLICY IF EXISTS "employees_update" ON employees;
+DROP POLICY IF EXISTS "employees_delete_admin" ON employees;
+
+CREATE POLICY "employees_select" ON employees FOR SELECT TO authenticated USING (true);
+CREATE POLICY "employees_insert_self" ON employees FOR INSERT TO authenticated WITH CHECK (id = (auth.uid())::text);
+CREATE POLICY "employees_insert_admin" ON employees FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM employees AS me WHERE me.id = (auth.uid())::text AND me.role = 'Admin')
+);
+CREATE POLICY "employees_update" ON employees FOR UPDATE TO authenticated USING (
+  id = (auth.uid())::text OR EXISTS (SELECT 1 FROM employees AS me WHERE me.id = (auth.uid())::text AND me.role = 'Admin')
+);
+CREATE POLICY "employees_delete_admin" ON employees FOR DELETE TO authenticated USING (
+  EXISTS (SELECT 1 FROM employees AS me WHERE me.id = (auth.uid())::text AND me.role = 'Admin')
+);
+
+-- ─── 2. COMPANIES ────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "companies_select" ON companies;
+DROP POLICY IF EXISTS "companies_insert" ON companies;
+DROP POLICY IF EXISTS "companies_update" ON companies;
+DROP POLICY IF EXISTS "companies_delete" ON companies;
+
+CREATE POLICY "companies_select" ON companies FOR SELECT TO authenticated USING (true);
+CREATE POLICY "companies_insert" ON companies FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "companies_update" ON companies FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "companies_delete" ON companies FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+
+-- ─── 3. ASSETS ───────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "assets_select" ON assets;
+DROP POLICY IF EXISTS "assets_insert" ON assets;
+DROP POLICY IF EXISTS "assets_update" ON assets;
+DROP POLICY IF EXISTS "assets_delete" ON assets;
+
+CREATE POLICY "assets_select" ON assets FOR SELECT TO authenticated USING (true);
+CREATE POLICY "assets_insert" ON assets FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "assets_update" ON assets FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "assets_delete" ON assets FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+
+-- ─── 4. ACTIVITY LOGS ────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "activity_logs_select" ON activity_logs;
+DROP POLICY IF EXISTS "activity_logs_insert" ON activity_logs;
+
+CREATE POLICY "activity_logs_select" ON activity_logs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "activity_logs_insert" ON activity_logs FOR INSERT TO authenticated WITH CHECK (true);
+
+-- ─── 5. VAULT (ADMINS ONLY) ──────────────────────────────────────────────────
+DROP POLICY IF EXISTS "vault_select" ON vault;
+DROP POLICY IF EXISTS "vault_insert" ON vault;
+DROP POLICY IF EXISTS "vault_insert_self" ON vault;
+DROP POLICY IF EXISTS "vault_insert_admin" ON vault;
+DROP POLICY IF EXISTS "vault_update" ON vault;
+DROP POLICY IF EXISTS "vault_delete" ON vault;
+
+CREATE POLICY "vault_select" ON vault FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "vault_insert" ON vault FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "vault_update" ON vault FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "vault_delete" ON vault FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+
+-- ─── 6. VAULT PASSWORD HISTORY (ADMINS ONLY) ─────────────────────────────────
+DROP POLICY IF EXISTS "vault_history_select" ON vault_password_history;
+DROP POLICY IF EXISTS "vault_history_insert" ON vault_password_history;
+
+CREATE POLICY "vault_history_select" ON vault_password_history FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+CREATE POLICY "vault_history_insert" ON vault_password_history FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin'));
+
+-- ─── 7. APP BACKUPS ──────────────────────────────────────────────────────────
+-- RLS enabled (via ALTER TABLE above) but NO policies defined.
+-- This ensures ONLY the Supabase Service Role (backend APIs) can read/write.
+-- Standard authenticated users have 0 access.
