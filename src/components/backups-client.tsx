@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, RefreshCw, Trash2, UploadCloud, Database, HardDriveDownload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/lib/supabase';
 
 export function BackupsClient() {
   const { toast } = useToast();
@@ -25,10 +26,23 @@ export function BackupsClient() {
   const [isRestoring, setIsRestoring] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = new Headers(options.headers || {});
+      if (session?.access_token) {
+        headers.set('Authorization', `Bearer ${session.access_token}`);
+      }
+      return fetch(url, { ...options, headers });
+    } catch (e) {
+      return fetch(url, options);
+    }
+  };
+
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/backup/history');
+      const res = await fetchWithAuth('/api/backup/history');
       const json = await res.json();
       if (json.success) {
         setBackups(json.data);
@@ -42,7 +56,7 @@ export function BackupsClient() {
 
   const fetchRetention = async () => {
     try {
-      const res = await fetch('/api/backup/retention');
+      const res = await fetchWithAuth('/api/backup/retention');
       const json = await res.json();
       if (json.success) {
         setRetention(json.retentionDays.toString());
@@ -60,7 +74,7 @@ export function BackupsClient() {
   const handleUpdateRetention = async (days: string) => {
     setRetention(days);
     try {
-      await fetch('/api/backup/retention', {
+      await fetchWithAuth('/api/backup/retention', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ retentionDays: parseInt(days) })
@@ -74,7 +88,7 @@ export function BackupsClient() {
   const handleQuickBackup = async () => {
     setIsBackingUp(true);
     try {
-      const res = await fetch('/api/backup/create', { method: 'POST' });
+      const res = await fetchWithAuth('/api/backup/create', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
         toast({ title: 'Backup Successful', description: `Generated file: ${json.fileName}` });
@@ -130,7 +144,7 @@ export function BackupsClient() {
     
     setIsRestoring(true);
     try {
-      const res = await fetch('/api/backup/restore', {
+      const res = await fetchWithAuth('/api/backup/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName })
@@ -153,7 +167,7 @@ export function BackupsClient() {
     if (!confirm(`Delete backup ${fileName}?`)) return;
     
     try {
-      const res = await fetch('/api/backup/delete', {
+      const res = await fetchWithAuth('/api/backup/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, fileName })

@@ -1,8 +1,34 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+
+    let triggerType = 'manual';
+
+    if (cronSecret) {
+      const isCron = authHeader === `Bearer ${cronSecret}`;
+      if (isCron) {
+        triggerType = 'automated (cron)';
+      } else {
+        if (!authHeader?.startsWith('Bearer ')) {
+          return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+        }
+        const token = authHeader.split(' ')[1];
+        const supabaseAuth = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+        );
+        const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+        if (error || !user) {
+          return NextResponse.json({ error: 'Unauthorized: Invalid user session' }, { status: 401 });
+        }
+      }
+    }
+
     const supabaseAdmin = getServiceSupabase();
 
     const tables = [
@@ -56,7 +82,7 @@ export async function POST() {
       size_bytes: totalSize,
       record_counts: recordCounts,
       status: 'completed',
-      trigger_type: 'manual'
+      trigger_type: triggerType
     });
 
     if (dbError) {
