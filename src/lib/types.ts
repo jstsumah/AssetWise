@@ -29,6 +29,7 @@ export type Asset = {
   companyId: string;
   assetValue: number;
   remarks?: string;
+  phoneNumber?: string;
 };
 
 export type Employee = {
@@ -60,7 +61,7 @@ export type RecentActivity = {
   action: 'Assigned' | 'Returned';
 }
 
-export type VaultCategory = 'Login' | 'Wi-Fi' | 'API Key' | 'SSH Key' | 'Database' | 'Other';
+export type VaultCategory = 'Login' | 'Wi-Fi' | 'API Key' | 'SSH Key' | 'Database' | 'Phone Email' | 'Other';
 export type VaultAccess = 'owner' | 'admins' | 'company';
 
 export type PasswordHistoryEntry = {

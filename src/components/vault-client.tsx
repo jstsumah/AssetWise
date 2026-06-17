@@ -8,7 +8,7 @@ import * as z from 'zod';
 import {
   Plus, Eye, EyeOff, Copy, Trash2, Pencil, RefreshCw,
   KeyRound, Globe, Lock, Wifi, Server, Database, Search,
-  Shield, Users, Building2, Check, X, ChevronDown, ExternalLink,
+  Shield, Users, Building2, Check, X, ChevronDown, ExternalLink, Smartphone
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ import type { VaultEntry, VaultCategory, VaultAccess, PasswordHistoryEntry } fro
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 
-const CATEGORIES: VaultCategory[] = ['Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Other'];
+const CATEGORIES: VaultCategory[] = ['Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Phone Email', 'Other'];
 const ACCESS_LEVELS: { value: VaultAccess; label: string; icon: React.ElementType }[] = [
   { value: 'owner', label: 'Only Me', icon: Lock },
   { value: 'admins', label: 'Admins Only', icon: Shield },
@@ -58,7 +58,7 @@ const formSchema = z.object({
   password: z.string().min(1, 'Password is required'),
   url: z.string().url({ message: 'Enter a valid URL' }).optional().or(z.literal('')),
   notes: z.string().optional(),
-  category: z.enum(['Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Other'] as const),
+  category: z.enum(['Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Phone Email', 'Other'] as const),
   accessLevel: z.enum(['owner', 'admins', 'company'] as const),
 });
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +71,7 @@ const categoryIcon: Record<VaultCategory, React.ElementType> = {
   'API Key': RefreshCw,
   'SSH Key': Server,
   'Database': Database,
+  'Phone Email': Smartphone,
   'Other': Globe,
 };
 
@@ -80,6 +81,7 @@ const categoryColor: Record<VaultCategory, string> = {
   'API Key': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   'SSH Key': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   'Database': 'bg-red-500/20 text-red-400 border-red-500/30',
+  'Phone Email': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
   'Other': 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
 };
 
@@ -148,6 +150,16 @@ const FIELD_CONFIGS: Record<VaultCategory, CategoryFieldConfig> = {
     showUrl: true,
     urlLabel: 'Host / Connection String',
     urlPlaceholder: 'postgresql://db.example.com:5432/dbname',
+  },
+  'Phone Email': {
+    titleLabel: 'Phone Email Description',
+    titlePlaceholder: 'e.g. iPhone Apple ID, Android Google Account',
+    showUsername: true,
+    usernameLabel: 'Email Address',
+    usernamePlaceholder: 'username@example.com',
+    passwordLabel: 'Email Password',
+    passwordPlaceholder: 'Enter account password',
+    showUrl: false,
   },
   'Other': {
     titleLabel: 'Title',

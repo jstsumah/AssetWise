@@ -35,9 +35,11 @@ import {
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
 import type { Asset, Company } from "@/lib/types"
-import { addAsset, clearCache, updateAsset } from "@/lib/data"
+import { addAsset, clearCache, updateAsset, addVaultEntry } from "@/lib/data"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
 import { Textarea } from "./ui/textarea"
+import { useAuth } from "@/hooks/use-auth"
+import { deriveKey, encryptPassword } from "@/lib/crypto"
 
 const formSchema = z.object({
   serialNumber: z.string().min(1, "Serial number is required"),
@@ -51,6 +53,19 @@ const formSchema = z.object({
   }),
   assetValue: z.coerce.number().min(0, "Asset value must be a positive number."),
   remarks: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  emailAddress: z.string().optional(),
+  emailPassword: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.category === "Phone") {
+    if (!data.phoneNumber || data.phoneNumber.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Phone number is required for phone devices",
+        path: ["phoneNumber"],
+      });
+    }
+  }
 })
 
 type RegisterAssetFormValues = z.infer<typeof formSchema>;
@@ -58,6 +73,7 @@ type RegisterAssetFormValues = z.infer<typeof formSchema>;
 export function RegisterAssetForm({ onFinished, companies, asset, assets }: { onFinished: () => void, companies: Company[], asset?: Asset | null, assets: Asset[] }) {
   const { toast } = useToast()
   const { refreshData } = useDataRefresh();
+  const { user } = useAuth();
   const [isSaving, setIsSaving] = React.useState(false);
 
   const isEditing = !!asset;
@@ -74,6 +90,9 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
       purchaseDate: asset?.purchaseDate ? new Date(asset.purchaseDate) : undefined,
       assetValue: asset?.assetValue ?? 0,
       remarks: asset?.remarks ?? "",
+      phoneNumber: asset?.phoneNumber ?? "",
+      emailAddress: "",
+      emailPassword: "",
     },
   })
 
@@ -92,9 +111,31 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
       return;
     }
 
+    // Manual validation for Email/Password when registering a new phone
+    if (values.category === 'Phone' && !isEditing) {
+      if (!values.emailAddress || values.emailAddress.trim().length === 0) {
+        form.setError('emailAddress', { type: 'manual', message: 'Email address is required for phone devices' });
+        setIsSaving(false);
+        return;
+      }
+      if (!values.emailPassword || values.emailPassword.trim().length === 0) {
+        form.setError('emailPassword', { type: 'manual', message: 'Email password is required for phone devices' });
+        setIsSaving(false);
+        return;
+      }
+    }
+
     const assetData = {
-      ...values,
+      serialNumber: values.serialNumber,
+      tagNo: values.tagNo,
+      category: values.category,
+      companyId: values.companyId,
+      brand: values.brand,
+      model: values.model,
       purchaseDate: format(values.purchaseDate, 'yyyy-MM-dd'),
+      assetValue: values.assetValue,
+      remarks: values.remarks,
+      phoneNumber: values.category === 'Phone' ? values.phoneNumber : undefined,
     };
 
     try {
@@ -110,6 +151,43 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
           title: "Asset Registered!",
           description: `Asset ${values.serialNumber} has been added to the inventory.`,
         });
+
+        // Trigger vault entry if category is Phone
+        if (values.category === 'Phone' && values.emailAddress && values.emailPassword) {
+          try {
+            const cryptoKey = await deriveKey(values.companyId);
+            const { encryptedPassword, iv } = await encryptPassword(values.emailPassword, cryptoKey);
+            
+            const vaultPayload = {
+              title: `Phone Email: ${values.brand} ${values.model} (${values.serialNumber})`,
+              username: values.emailAddress,
+              encryptedPassword,
+              iv,
+              url: '',
+              notes: `Auto-generated credential for Phone Asset Serial: ${values.serialNumber}. Phone Number: ${values.phoneNumber || 'N/A'}.`,
+              category: 'Phone Email' as any,
+              accessLevel: 'admins' as any,
+              ownerId: user?.id || 'system',
+              ownerName: user?.name || 'System',
+              companyId: values.companyId,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            
+            await addVaultEntry(vaultPayload);
+            toast({
+              title: "Credentials Saved",
+              description: "Associated email credentials have been securely encrypted and saved to the Password Vault.",
+            });
+          } catch (vaultErr: any) {
+            console.error("Failed to auto-create vault entry:", vaultErr);
+            toast({
+              title: "Credentials Save Failed",
+              description: "Asset was registered, but email credentials could not be saved to the Vault.",
+              variant: "destructive"
+            });
+          }
+        }
       }
       clearCache();
       refreshData();
@@ -302,6 +380,56 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
                 </FormItem>
             )}
         />
+        {form.watch("category") === "Phone" && (
+          <div className="space-y-4 border-t pt-4 mt-4">
+            <h4 className="font-medium text-sm text-muted-foreground">Phone Attributes</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. +254 712 345678" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {!isEditing && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="emailAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Associated Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="e.g. phone@company.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="emailPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Associated Email Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Enter password for vault" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
         <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onFinished} disabled={isSaving}>Cancel</Button>
             <Button type="submit" disabled={isSaving}>

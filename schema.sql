@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS assets (
     assetValue DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     remarks TEXT,
     companyId VARCHAR(255) NOT NULL,
+    phoneNumber VARCHAR(100),
     CONSTRAINT fk_asset_employee FOREIGN KEY (assignedTo) REFERENCES employees(id) ON DELETE SET NULL,
     CONSTRAINT fk_asset_company FOREIGN KEY (companyId) REFERENCES companies(id) ON DELETE CASCADE
 );
@@ -106,6 +107,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assets' AND column_name='companyid') THEN
         ALTER TABLE assets ADD COLUMN companyId VARCHAR(255);
         ALTER TABLE assets ADD CONSTRAINT fk_asset_company FOREIGN KEY (companyId) REFERENCES companies(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='assets' AND column_name='phonenumber') THEN
+        ALTER TABLE assets ADD COLUMN phoneNumber VARCHAR(100);
     END IF;
 END $$;
 
@@ -132,7 +136,7 @@ CREATE TABLE IF NOT EXISTS vault (
     iv VARCHAR(50) NOT NULL,                             -- AES-GCM base64 initialization vector
     url TEXT,
     notes TEXT,
-    category VARCHAR(50) NOT NULL CHECK (category IN ('Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Other')),
+    category VARCHAR(50) NOT NULL CHECK (category IN ('Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Phone Email', 'Other')),
     accessLevel VARCHAR(50) NOT NULL DEFAULT 'owner' CHECK (accessLevel IN ('owner', 'admins', 'company')),
     ownerId VARCHAR(255) NOT NULL,
     ownerName VARCHAR(255) NOT NULL,
@@ -142,6 +146,24 @@ CREATE TABLE IF NOT EXISTS vault (
     CONSTRAINT fk_vault_employee FOREIGN KEY (ownerId) REFERENCES employees(id) ON DELETE CASCADE,
     CONSTRAINT fk_vault_company FOREIGN KEY (companyId) REFERENCES companies(id) ON DELETE CASCADE
 );
+
+-- Safe Constraint Upgrades for Vault
+DO $$ 
+DECLARE
+    constraint_name text;
+BEGIN 
+    SELECT conname INTO constraint_name
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+    WHERE rel.relname = 'vault' AND con.contype = 'c' AND pg_get_constraintdef(con.oid) LIKE '%category%';
+
+    IF constraint_name IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE vault DROP CONSTRAINT ' || constraint_name;
+    END IF;
+    
+    ALTER TABLE vault ADD CONSTRAINT vault_category_check CHECK (category IN ('Login', 'Wi-Fi', 'API Key', 'SSH Key', 'Database', 'Phone Email', 'Other'));
+END $$;
 
 -- ─── 6. PASSWORD HISTORY (FAIL-SAFE ARCHIVE) TABLE ──────────────────────────
 CREATE TABLE IF NOT EXISTS vault_password_history (

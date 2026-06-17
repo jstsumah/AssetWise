@@ -86,7 +86,8 @@ function mapAssetFromDb(row: any): Asset {
     history: [], // History audit logs are retrieved dynamically from activity_logs
     companyId: row.companyid,
     assetValue: Number(row.assetvalue || 0),
-    remarks: row.remarks || ''
+    remarks: row.remarks || '',
+    phoneNumber: row.phonenumber || ''
   };
 }
 
@@ -105,6 +106,7 @@ function mapAssetToDb(asset: Partial<Asset>): any {
   if (asset.companyId !== undefined) row.companyid = asset.companyId;
   if (asset.assetValue !== undefined) row.assetvalue = asset.assetValue;
   if (asset.remarks !== undefined) row.remarks = asset.remarks;
+  if (asset.phoneNumber !== undefined) row.phonenumber = asset.phoneNumber;
   return row;
 }
 
@@ -292,7 +294,7 @@ export const deleteEmployee = async (employeeId: string) => {
     clearCache();
 };
 
-export const addAsset = async (data: Omit<Asset, 'id' | 'history' | 'status' | 'warrantyExpiry' | 'assignedTo'>) => {
+export const addAsset = async (data: Omit<Asset, 'id' | 'history' | 'status' | 'warrantyExpiry' | 'assignedTo'>): Promise<string> => {
     const newId = Math.random().toString(36).substring(2, 15);
     const warranty = new Date(new Date(data.purchaseDate).setFullYear(new Date(data.purchaseDate).getFullYear() + 2)).toISOString().split('T')[0];
     const dbData = mapAssetToDb({
@@ -304,6 +306,7 @@ export const addAsset = async (data: Omit<Asset, 'id' | 'history' | 'status' | '
     const { error } = await supabase.from('assets').insert({ id: newId, ...dbData });
     if (error) throw error;
     clearCache();
+    return newId;
 };
 
 export const updateAsset = async (assetId: string, data: Partial<Omit<Asset, 'id'>>) => {
