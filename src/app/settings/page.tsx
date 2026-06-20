@@ -13,6 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function SettingsPage() {
   const { isAdmin, isLoading } = useAuth();
@@ -63,6 +65,22 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Other future configurations will appear here.
           </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Overview</CardTitle>
+          <CardDescription>
+            Learn about AssetWise modules and product capabilities.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Take a visual tour of the Asset Lifecycle Register, secure Credentials Vault, and automatic Backups & Recovery management.
+          </p>
+          <Button asChild variant="outline">
+            <Link href="/product">Launch Product Tour</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

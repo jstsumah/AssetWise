@@ -41,16 +41,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
       pathname === '/forgot-password' || 
       pathname === '/reset-password';
     
+    const isPublicPage = isAuthPage || pathname === '/product';
+    
     // Redirect to home if a logged-in user is trying to access login/signup/forgot-password.
     // IMPORTANT: Do NOT redirect away from /reset-password, because Supabase's password recovery
     // mechanism actively logs the user in via a temporary session so they can set a new password.
     if (user && isAuthPage && pathname !== '/reset-password') {
       router.push('/');
+      return;
     }
     
-    // Redirect to login if a non-logged-in user is trying to access a protected page.
-    if (!user && !isAuthPage) {
-      router.push('/login');
+    // Redirect to product landing page if not logged in and hitting root,
+    // or to login if trying to access a protected page.
+    if (!user) {
+      if (pathname === '/') {
+        router.push('/product');
+        return;
+      }
+      if (!isPublicPage) {
+        router.push('/login');
+      }
     }
 
   }, [user, isLoading, pathname, router]);
@@ -71,7 +81,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
     pathname === '/forgot-password' || 
     pathname === '/reset-password';
 
-  // If there's a user and we're on a protected page, show the app shell.
+  const isPublicPage = isAuthPage || pathname === '/product';
+
+  // If there's a user and we're on a protected or internal page, show the app shell.
   if (user && !isAuthPage) {
     return (
         <>
@@ -81,9 +93,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If we are on an auth page and the user is NOT logged in, show the auth page content.
+  // If we are on a public page and the user is NOT logged in, show the page content directly.
   // Exception: If they ARE logged in AND on /reset-password, also show it so they can reset their password!
-  if ((!user && isAuthPage) || (user && pathname === '/reset-password')) {
+  if ((!user && isPublicPage) || (user && pathname === '/reset-password')) {
     return (
         <>
             {children}
