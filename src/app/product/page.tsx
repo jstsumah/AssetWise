@@ -55,14 +55,14 @@ export default function ProductPage() {
         className="relative w-full flex items-center justify-center overflow-hidden"
         style={{
           minHeight: '92vh',
-          backgroundImage: 'url(/hero-illustration.png)',
+          backgroundImage: 'url(/office-bg.jpg)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center top',
+          backgroundPosition: 'center 40%',
           backgroundRepeat: 'no-repeat',
         }}
       >
-        {/* Gradient overlay for legibility — top-to-bottom dark veil */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/85 via-background/60 to-background/95 pointer-events-none" />
+        {/* Gradient overlay — balanced for legibility + image visibility */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/45 to-background/85 pointer-events-none" />
 
         {/* Content centred over the image */}
         <div className="relative z-10 w-full max-w-4xl mx-auto px-6 py-28 md:py-40 flex flex-col items-center text-center space-y-7">
@@ -73,29 +73,24 @@ export default function ProductPage() {
             </Badge>
           </div>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold leading-tight md:leading-none text-foreground tracking-tight opacity-0 animate-tracking-expand">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-headline font-bold leading-tight md:leading-none text-white tracking-tight opacity-0 animate-tracking-expand">
             The Intelligent Infrastructure for{' '}
-            <span className="bg-gradient-to-r from-primary via-blue-500 to-indigo-600 bg-clip-text text-transparent">
+            <span className="text-orange-400" style={{ textShadow: '0 0 30px rgba(251,146,60,0.6), 0 2px 8px rgba(0,0,0,0.5)' }}>
               Corporate Assets
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed opacity-0 animate-fade-in-up delay-200">
+          <p className="text-lg md:text-xl text-white/90 max-w-2xl leading-relaxed opacity-0 animate-fade-in-up delay-200">
             Streamline asset workflows, safeguard enterprise credentials with zero-knowledge vaulting, and manage automated recovery pipelines in a unified, professional dashboard.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-2 opacity-0 animate-fade-in-up delay-300">
             <Button asChild size="lg" className="h-12 px-8 font-medium shadow-md shadow-primary/20 gap-2 hover:translate-y-[-1px] active:translate-y-[1px] transition-all">
               <Link href={user ? '/' : '/login'}>
-                {user ? 'Go to Dashboard' : 'Get Started'}
+                {user ? 'Go to Dashboard' : 'Sign In'}
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
-            {!user && (
-              <Button asChild variant="outline" size="lg" className="h-12 px-8 hover:bg-muted/50 transition-all">
-                <Link href="/signup">Create Free Account</Link>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -328,7 +323,7 @@ export default function ProductPage() {
               </p>
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="border rounded-lg p-3 bg-card space-y-1">
-                  <div className="text-xs font-semibold text-foreground">Military-Grade Vault</div>
+                  <div className="text-xs font-semibold text-foreground">Secure Vault</div>
                   <p className="text-xs text-muted-foreground">End-to-end secret encryption using web-crypto standards.</p>
                 </div>
                 <div className="border rounded-lg p-3 bg-card space-y-1">
