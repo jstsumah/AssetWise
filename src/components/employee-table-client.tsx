@@ -447,6 +447,12 @@ export function EmployeeTableClient({
       "Nurse",
       "Sustainability",
       "CWC Liason",
+      "Store Keeper",
+      "Food & Beverage",
+      "House Keeping",
+      "Front Office",
+      "Guest Relations",
+      "Masseuse",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [employees]);
