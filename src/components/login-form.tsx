@@ -126,16 +126,10 @@ export function LoginForm() {
               {isLoading && <LoaderCircle className="animate-spin mr-2" />}
               Sign In
             </Button>
-            <div className="text-center text-sm space-y-2">
+            <div className="text-center text-sm">
               <div className="text-muted-foreground">
                 <Link href="/forgot-password" className="text-primary hover:underline">
                   Forgot password?
-                </Link>
-              </div>
-              <div>
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" className="text-primary hover:underline">
-                  Sign up
                 </Link>
               </div>
             </div>

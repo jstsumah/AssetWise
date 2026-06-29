@@ -7,8 +7,6 @@ import {
   ShieldCheck,
   DatabaseBackup,
   Briefcase,
-  ArrowRight,
-  CheckCircle2,
 } from 'lucide-react';
 
 const features = [
@@ -72,16 +70,6 @@ export default function LoginPage() {
           <LoginForm />
         </div>
 
-        {/* Footer note */}
-        <p className="mt-10 text-xs text-muted-foreground text-center max-w-sm">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/signup"
-            className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
-          >
-            Create one free <ArrowRight className="size-3" />
-          </Link>
-        </p>
       </div>
 
       {/* ── RIGHT: Branded panel (60%) ── */}
@@ -109,10 +97,7 @@ export default function LoginPage() {
               Enterprise Platform
             </div>
             <h2 className="text-3xl xl:text-4xl font-headline font-bold text-white leading-tight">
-              The Infrastructure Your{' '}
-              <span className="bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                Team Deserves
-              </span>
+              The Infrastructure Your Team Deserves
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed max-w-lg">
               Manage workspace hardware, encrypted credentials, and disaster recovery — all in one unified, audit-ready control panel.

@@ -1,16 +1,9 @@
 'use client';
 
-import { SignupForm } from '@/components/signup-form';
 import { Logo } from '@/components/icons/logo';
 import Link from 'next/link';
-import {
-  ShieldCheck,
-  DatabaseBackup,
-  Briefcase,
-  ArrowLeft,
-  Sparkles,
-  CheckCircle2,
-} from 'lucide-react';
+import { ShieldCheck, DatabaseBackup, Briefcase, ArrowLeft, Lock } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 const highlights = [
   {
@@ -36,23 +29,17 @@ const highlights = [
   },
 ];
 
-const perks = [
-  'Free to get started — no credit card required',
-  'Role-based access control for your whole team',
-  'Audit trails and activity logs built-in',
-];
-
 export default function SignupPage() {
   return (
     <div className="flex min-h-screen">
-      {/* ── LEFT: Form panel (40%) ── */}
+      {/* LEFT: Restricted access panel */}
       <div
         className="flex flex-col justify-center items-center px-8 py-12 bg-background"
         style={{ width: '40%', minWidth: '360px' }}
       >
         {/* Logo */}
         <div className="w-full max-w-sm mb-10">
-          <Link href="/product" className="flex items-center gap-2 group w-fit">
+          <Link href="/login" className="flex items-center gap-2 group w-fit">
             <Logo className="size-7 text-primary transition-transform group-hover:scale-110" />
             <span className="text-xl font-semibold font-headline text-foreground">
               AssetWise
@@ -60,42 +47,69 @@ export default function SignupPage() {
           </Link>
         </div>
 
-        {/* Form */}
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <h1 className="text-2xl font-headline font-bold text-foreground tracking-tight">
-              Create your account
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Set up your workspace in under a minute.
-            </p>
-          </div>
-          <SignupForm />
-        </div>
-
-        {/* Perks list */}
-        <div className="w-full max-w-sm mt-8 space-y-2">
-          {perks.map((perk) => (
-            <div key={perk} className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-              {perk}
+        {/* Access restricted message */}
+        <div className="w-full max-w-sm space-y-6">
+          <div className="flex flex-col items-center text-center space-y-4 py-6">
+            <div className="size-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Lock className="size-8 text-primary" />
             </div>
-          ))}
-        </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-headline font-bold text-foreground tracking-tight">
+                Access by Invitation Only
+              </h1>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                New accounts are created by your system administrator. If you&apos;ve been added, check your email for a link to set your password.
+              </p>
+            </div>
+          </div>
 
-        {/* Footer note */}
-        <p className="mt-8 text-xs text-muted-foreground text-center max-w-sm">
-          Already have an account?{' '}
+          {/* Steps */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border border-border/50">
+              <div className="size-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-xs font-bold text-primary">1</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Admin adds your account</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Your IT administrator creates your profile in the system.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border border-border/50">
+              <div className="size-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-xs font-bold text-primary">2</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">You receive an email</p>
+                <p className="text-xs text-muted-foreground mt-0.5">A set-password link is sent to your work email address.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border border-border/50">
+              <div className="size-6 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-xs font-bold text-primary">3</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Admin activates your account</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Once activated by an admin, you can sign in with your new password.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Back to login */}
           <Link
             href="/login"
-            className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
           >
-            <ArrowLeft className="size-3" /> Sign in
+            <ArrowLeft className="size-4" />
+            Back to Sign In
           </Link>
-        </p>
+
+          <p className="text-xs text-center text-muted-foreground">
+            Need access? Contact your system administrator.
+          </p>
+        </div>
       </div>
 
-      {/* ── RIGHT: Branded panel (60%) ── */}
+      {/* RIGHT: Branded panel (60%) */}
       <div
         className="relative hidden md:flex flex-col overflow-hidden"
         style={{
@@ -105,35 +119,28 @@ export default function SignupPage() {
           backgroundPosition: 'center top',
         }}
       >
-        {/* Subtle vignette top */}
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
-
-        {/* Bottom overlay — dark gradient where content lives */}
         <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
 
-        {/* Content — pinned to bottom */}
         <div className="relative z-10 mt-auto w-full px-12 py-10 space-y-6">
-          {/* Badge + headline */}
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary border border-primary/30 bg-primary/10 px-3 py-1 rounded-full backdrop-blur-sm">
               <Sparkles className="size-3 text-primary" />
-              Join AssetWise Today
+              Admin-Controlled Access
             </div>
             <h2 className="text-3xl xl:text-4xl font-headline font-bold text-white leading-tight">
-              Everything Your Team{' '}
+              Secure by Design,{' '}
               <span className="bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                Needs to Operate
+                Access by Invitation
               </span>
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed max-w-lg">
-              A single, secure source of truth — from hardware to credentials and automated recovery pipelines.
+              Only your administrator can provision accounts, ensuring every user is verified and trusted before gaining access.
             </p>
           </div>
 
-          {/* Divider */}
           <div className="border-t border-white/10" />
 
-          {/* Feature grid — 3 columns, all on one line */}
           <div className="grid grid-cols-3 gap-3">
             {highlights.map(({ icon: Icon, color, bg, title, desc }) => (
               <div
@@ -151,20 +158,6 @@ export default function SignupPage() {
             ))}
           </div>
 
-          {/* Testimonial strip */}
-          <div className="border border-white/10 bg-white/5 rounded-xl px-5 py-4 backdrop-blur-sm flex items-start gap-4">
-            <div className="size-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              SK
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm text-slate-200 italic leading-relaxed">
-                &ldquo;AssetWise cut our hardware audit time from days to minutes. The vault alone saved us three incidents.&rdquo;
-              </p>
-              <div className="text-xs text-slate-400 mt-1.5 font-medium">Sarah K. — IT Operations Lead</div>
-            </div>
-          </div>
-
-          {/* Copyright */}
           <p className="text-xs text-slate-500">
             © {new Date().getFullYear()} AssetWise Inc. — Professional workspace management.
           </p>

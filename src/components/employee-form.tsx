@@ -65,7 +65,7 @@ export function EmployeeForm({ onFinished, departments, companies, employee }: {
         await createEmployee(values);
         toast({
             title: "Employee Added!",
-            description: `${values.name} has been added. Their authentication account already exists — just activate their profile to grant access.`,
+            description: `${values.name} has been added and a set-password email has been sent to ${values.email}. Activate their account when they're ready to log in.`,
         });
       }
       clearCache();

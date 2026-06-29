@@ -223,52 +223,71 @@ export const updateEmployee = async (employeeId: string, data: Partial<Omit<Empl
 };
 
 export const createEmployee = async (data: Omit<Employee, 'id' | 'avatarUrl' | 'active'>) => {
-    // Step 1 — check if this email already exists in Supabase Auth (requires service-role via API route)
+    // Step 1 — Create (or locate) the Supabase Auth user via server-side API.
+    // This also dispatches a "set your password" email to the new user.
     let authUserId: string | null = null;
+
     try {
-        const res = await fetch('/api/auth/lookup-user', {
+        const res = await fetch('/api/auth/create-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: data.email }),
+            body: JSON.stringify({ email: data.email, name: data.name }),
         });
         if (res.ok) {
             const payload = await res.json();
-            if (payload.found) {
-                authUserId = payload.userId as string;
-            }
+            authUserId = payload.userId as string;
+        } else {
+            const errPayload = await res.json().catch(() => ({}));
+            console.warn('[createEmployee] Auth user creation failed:', errPayload?.error);
         }
     } catch (err) {
-        // If the lookup fails (e.g. no service-role key), fall through to the original behaviour
-        console.warn('[createEmployee] Auth lookup failed, proceeding without it:', err);
+        console.warn('[createEmployee] Failed to call create-user API:', err);
     }
 
-    if (authUserId) {
-        // Step 2a — Auth user exists; check if an employee profile already exists too
-        const { data: existing } = await supabase
-            .from('employees')
-            .select('id')
-            .eq('id', authUserId)
-            .maybeSingle();
-
-        if (existing) {
-            // Both auth and profile exist → surface a "suggest login" error
-            throw new Error('EMAIL_ALREADY_EXISTS');
-        }
-
-        // Step 2b — Auth exists but no profile → insert the profile using the auth UUID
-        const dbData = mapEmployeeToDb({ ...data, avatarUrl: '', active: false });
-        const { error } = await supabase.from('employees').insert({ id: authUserId, ...dbData });
-        if (error) throw error;
-    } else {
-        // Step 3 — Not in auth at all → original behaviour (admin will create auth account separately)
+    if (!authUserId) {
+        // Fallback: auth account could not be provisioned — insert profile with a
+        // placeholder ID. Admin will need to link auth manually.
         const newId = Math.random().toString(36).substring(2, 15);
         const dbData = mapEmployeeToDb({ ...data, avatarUrl: '', active: false });
         const { error } = await supabase.from('employees').insert({ id: newId, ...dbData });
+        if (error) throw error;
+        clearCache();
+        return;
+    }
+
+    // Step 2 — Upsert the employee profile.
+    // We use UPDATE-or-INSERT logic to handle all scenarios:
+    //   a) Auth user was just created + DB trigger auto-inserted a skeleton row → UPDATE with real data
+    //   b) Auth user pre-existed + skeleton/partial row exists (prior attempt) → UPDATE with real data
+    //   c) No employee row exists at all → INSERT fresh
+    const { data: existing } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('id', authUserId)
+        .maybeSingle();
+
+    const dbData = mapEmployeeToDb({ ...data, avatarUrl: '', active: false });
+
+    if (existing) {
+        // Row exists for any reason — overwrite with the admin-provided data.
+        const { error } = await supabase
+            .from('employees')
+            .update(dbData)
+            .eq('id', authUserId);
+        if (error) throw error;
+    } else {
+        // No existing profile — insert fresh.
+        // active: false — admin must explicitly activate before the user can log in.
+        const { error } = await supabase
+            .from('employees')
+            .insert({ id: authUserId, ...dbData });
         if (error) throw error;
     }
 
     clearCache();
 };
+
+
 
 export const deleteEmployee = async (employeeId: string) => {
     // 1. Delete from Supabase Auth (requires service role key on the server)
