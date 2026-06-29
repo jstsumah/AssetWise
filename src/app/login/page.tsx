@@ -86,26 +86,25 @@ export default function LoginPage() {
 
       {/* ── RIGHT: Branded panel (60%) ── */}
       <div
-        className="relative hidden md:flex items-center justify-center overflow-hidden"
+        className="relative hidden md:flex flex-col overflow-hidden"
         style={{
           width: '60%',
-          backgroundImage: 'url(/feature-showcase.png)',
+          backgroundImage: 'url(/office-bg.jpg)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundPosition: 'center top',
         }}
       >
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/75 to-slate-950/95" />
+        {/* Subtle vignette top so it blends with background */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
 
-        {/* Ambient glow blobs */}
-        <div className="absolute top-[-10%] right-[-5%] w-[45%] aspect-square rounded-full bg-primary/20 blur-[100px] pointer-events-none animate-pulse-slow" />
-        <div className="absolute bottom-[-5%] left-[-5%] w-[35%] aspect-square rounded-full bg-indigo-600/15 blur-[80px] pointer-events-none animate-pulse-slow" style={{ animationDelay: '3s' }} />
+        {/* Bottom overlay — dark gradient where content lives */}
+        <div className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent pointer-events-none" />
 
-        {/* Content — full width, generous padding */}
-        <div className="relative z-10 w-full h-full flex flex-col justify-center px-16 py-16 space-y-8">
-          {/* Headline */}
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary border border-primary/30 bg-primary/5 px-3 py-1 rounded-full">
+        {/* Content — pinned to bottom */}
+        <div className="relative z-10 mt-auto w-full px-12 py-10 space-y-6">
+          {/* Badge + headline */}
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary border border-primary/30 bg-primary/10 px-3 py-1 rounded-full backdrop-blur-sm">
               <span className="size-1.5 rounded-full bg-primary animate-pulse inline-block" />
               Enterprise Platform
             </div>
@@ -115,7 +114,7 @@ export default function LoginPage() {
                 Team Deserves
               </span>
             </h2>
-            <p className="text-base text-slate-400 leading-relaxed max-w-lg">
+            <p className="text-sm text-slate-300 leading-relaxed max-w-lg">
               Manage workspace hardware, encrypted credentials, and disaster recovery — all in one unified, audit-ready control panel.
             </p>
           </div>
@@ -128,31 +127,31 @@ export default function LoginPage() {
             {stats.map((s) => (
               <div key={s.label}>
                 <div className="text-2xl font-headline font-bold text-white">{s.value}</div>
-                <div className="text-sm text-slate-400 mt-0.5">{s.label}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
               </div>
             ))}
           </div>
 
-          {/* Feature grid — 2 columns, full-width */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Feature grid — 3 columns, all on one line */}
+          <div className="grid grid-cols-3 gap-3">
             {features.map(({ icon: Icon, color, bg, title, desc }) => (
               <div
                 key={title}
-                className="flex flex-col gap-3 bg-white/5 border border-white/10 rounded-xl px-5 py-5 backdrop-blur-sm hover:bg-white/8 transition-colors group"
+                className="flex flex-col gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-3 backdrop-blur-sm hover:bg-white/8 transition-colors group"
               >
-                <div className={`size-10 rounded-lg ${bg} flex items-center justify-center group-hover:scale-105 transition-transform`}>
-                  <Icon className={`size-5 ${color}`} />
+                <div className={`size-8 shrink-0 rounded-lg ${bg} flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                  <Icon className={`size-4 ${color}`} />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white leading-snug">{title}</div>
-                  <div className="text-xs text-slate-400 mt-1.5 leading-relaxed">{desc}</div>
+                  <div className="text-xs font-semibold text-white leading-snug">{title}</div>
+                  <div className="text-xs text-slate-400 mt-1 leading-relaxed">{desc}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Bottom copyright */}
-          <p className="text-xs text-slate-600 pt-2">
+          {/* Copyright */}
+          <p className="text-xs text-slate-500">
             © {new Date().getFullYear()} AssetWise Inc. — Professional workspace management.
           </p>
         </div>
