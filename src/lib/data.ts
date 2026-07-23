@@ -1,5 +1,5 @@
 
-import type { Asset, AssetCategory, AssetStatus, Company, Employee, RecentActivity, VaultAccess, VaultCategory, VaultEntry } from './types';
+import type { Asset, AssetCategory, AssetStatus, Company, Employee, RecentActivity, SystemAuditLog, AuditCategory, VaultAccess, VaultCategory, VaultEntry } from './types';
 import { supabase } from './supabase';
 
 // Caching layer to prevent re-fetching data on every navigation
@@ -663,4 +663,59 @@ export const importCompanies = async (
     clearCache();
     return result;
 };
+
+// ─── System Audit Logs ─────────────────────────────────────────────────────────
+
+export const recordAuditLog = async (log: {
+  userId?: string;
+  userName: string;
+  userEmail: string;
+  action: string;
+  category: AuditCategory;
+  details: string;
+  companyId?: string;
+}): Promise<void> => {
+  try {
+    const { error } = await supabase.from('system_audit_logs').insert({
+      userid: log.userId,
+      username: log.userName,
+      useremail: log.userEmail,
+      action: log.action,
+      category: log.category,
+      details: log.details,
+      companyid: log.companyId
+    });
+    if (error) {
+      console.warn('[Audit] Failed to insert audit log:', error.message);
+    }
+  } catch (err) {
+    console.error('[Audit] Error inserting audit log:', err);
+  }
+};
+
+export const getSystemAuditLogs = async (companyId?: string): Promise<SystemAuditLog[]> => {
+  try {
+    let query = supabase.from('system_audit_logs').select('*');
+    if (companyId) {
+      query = query.eq('companyid', companyId);
+    }
+    const { data, error } = await query.order('createdat', { ascending: false }).limit(300);
+    if (error) throw error;
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      userId: row.userid,
+      userName: row.username,
+      userEmail: row.useremail,
+      action: row.action,
+      category: row.category as AuditCategory,
+      details: row.details,
+      companyId: row.companyid,
+      createdAt: row.createdat
+    }));
+  } catch (err) {
+    console.error('[Audit] Failed to fetch system audit logs:', err);
+    return [];
+  }
+};
+
 

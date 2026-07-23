@@ -15,6 +15,7 @@ import {
   Building,
   KeyRound,
   DatabaseBackup,
+  ShieldAlert,
 } from 'lucide-react';
 
 import {
@@ -53,6 +54,7 @@ const adminNavItems = [
   { href: '/companies', icon: Building, label: 'Companies'},
 
   { href: '/vault', icon: KeyRound, label: 'Vault' },
+  { href: '/audit-logs', icon: ShieldAlert, label: 'Audit Logs' },
   { href: '/backups', icon: DatabaseBackup, label: 'Backups & Recovery' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];

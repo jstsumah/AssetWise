@@ -30,11 +30,19 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import {
-  getVaultEntries, addVaultEntry, updateVaultEntry, deleteVaultEntry,
+  getVaultEntries, addVaultEntry, updateVaultEntry, deleteVaultEntry, recordAuditLog,
 } from '@/lib/data';
 import {
   deriveKey, encryptPassword, decryptPassword,
@@ -203,14 +211,15 @@ function PasswordStrengthMeter({ password }: { password: string }) {
 
 // ─── Single vault card ────────────────────────────────────────────────────────
 
-interface VaultCardProps {
+interface VaultTableRowProps {
   entry: VaultEntry;
   cryptoKey: CryptoKey | null;
   onEdit: (entry: VaultEntry) => void;
   onDelete: (entry: VaultEntry) => void;
 }
 
-function VaultCard({ entry, cryptoKey, onEdit, onDelete }: VaultCardProps) {
+function VaultTableRow({ entry, cryptoKey, onEdit, onDelete }: VaultTableRowProps) {
+  const { user } = useAuth();
   const [revealed, setRevealed] = useState(false);
   const [decrypted, setDecrypted] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -222,6 +231,17 @@ function VaultCard({ entry, cryptoKey, onEdit, onDelete }: VaultCardProps) {
     if (!revealed) {
       const plain = await decryptPassword(entry.encryptedPassword, entry.iv, cryptoKey);
       setDecrypted(plain);
+      if (user) {
+        recordAuditLog({
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          action: 'VAULT_ACCESS',
+          category: 'Vault',
+          details: `Revealed password for '${entry.title}' (${entry.category})`,
+          companyId: user.companyId
+        });
+      }
     }
     setRevealed((v) => !v);
   };
@@ -235,7 +255,18 @@ function VaultCard({ entry, cryptoKey, onEdit, onDelete }: VaultCardProps) {
     }
     await navigator.clipboard.writeText(plain);
     setCopied(true);
-    toast({ title: 'Copied to clipboard', description: 'Password will be cleared in 30 seconds.' });
+    toast({ title: 'Password copied to clipboard', description: 'Will be cleared in 30 seconds.' });
+    if (user) {
+      recordAuditLog({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        action: 'VAULT_ACCESS',
+        category: 'Vault',
+        details: `Copied password for '${entry.title}' (${entry.category})`,
+        companyId: user.companyId
+      });
+    }
     setTimeout(() => {
       navigator.clipboard.writeText('').catch(() => {});
       setCopied(false);
@@ -246,7 +277,7 @@ function VaultCard({ entry, cryptoKey, onEdit, onDelete }: VaultCardProps) {
     if (!entry.username) return;
     await navigator.clipboard.writeText(entry.username);
     setCopiedUsername(true);
-    toast({ title: 'Username copied', description: 'Username copied to clipboard.' });
+    toast({ title: 'Username copied' });
     setTimeout(() => {
       setCopiedUsername(false);
     }, 3000);
@@ -256,126 +287,151 @@ function VaultCard({ entry, cryptoKey, onEdit, onDelete }: VaultCardProps) {
   const AccessIcon = ACCESS_LEVELS.find(a => a.value === entry.accessLevel)?.icon ?? Lock;
 
   return (
-    <div className="group relative rounded-xl border bg-card hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 overflow-hidden">
-      {/* Colored top accent */}
-      <div className={`h-1 w-full ${categoryColor[entry.category].split(' ')[0]}`} />
-
-      <div className="p-5">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`rounded-lg p-2 border ${categoryColor[entry.category]}`}>
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold truncate">{entry.title}</p>
-              {entry.username && (
-                <p className="text-sm text-muted-foreground truncate">{entry.username}</p>
+    <TableRow className="hover:bg-muted/50 transition-colors">
+      {/* Title / Name */}
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2.5 min-w-[180px]">
+          <div className={`rounded-lg p-1.5 border shrink-0 ${categoryColor[entry.category]}`}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-foreground truncate">{entry.title}</span>
+              {entry.url && (
+                <a
+                  href={entry.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                  title="Open URL"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
               )}
             </div>
+            {entry.notes && (
+              <p className="text-xs text-muted-foreground truncate max-w-[220px]">{entry.notes}</p>
+            )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+        </div>
+      </TableCell>
+
+      {/* Category */}
+      <TableCell>
+        <Badge variant="outline" className={`text-xs ${categoryColor[entry.category]}`}>
+          {entry.category}
+        </Badge>
+      </TableCell>
+
+      {/* Username with Copy Icon */}
+      <TableCell>
+        {entry.username ? (
+          <div className="flex items-center gap-1 min-w-[160px]">
+            <span className="font-mono text-sm text-foreground truncate max-w-[180px]" title={entry.username}>
+              {entry.username}
+            </span>
             <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(entry)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Edit</TooltipContent>
-              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => onDelete(entry)}
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                    onClick={handleCopyUsername}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    {copiedUsername ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
+                <TooltipContent>Copy username</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
-        </div>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        )}
+      </TableCell>
 
-        {/* Password row */}
-        <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 font-mono text-sm">
-          <span className="flex-1 truncate tracking-wider">
+      {/* Password with Eye & Copy Icons */}
+      <TableCell>
+        <div className="flex items-center gap-1 min-w-[180px]">
+          <span className="font-mono text-sm tracking-wider select-all">
             {revealed && decrypted ? decrypted : '••••••••••••'}
           </span>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={toggleReveal}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={toggleReveal}
+                >
                   {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{revealed ? 'Hide' : 'Show'}</TooltipContent>
             </Tooltip>
+
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleCopy}>
-                  {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground shrink-0"
+                  onClick={handleCopy}
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Copy password</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
+      </TableCell>
 
-        {/* Labeled Quick-Copy Action Buttons */}
-        <div className="mt-3 flex gap-2">
-          {entry.username && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="flex-1 h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
-              onClick={handleCopyUsername}
-            >
-              {copiedUsername ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-              <span>Copy Username</span>
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant={entry.username ? "secondary" : "default"}
-            size="sm"
-            className={`h-8 gap-1.5 text-xs font-medium ${entry.username ? 'flex-1' : 'w-full'}`}
-            onClick={handleCopy}
-          >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-            <span>{copied ? 'Copied Password' : 'Copy Password'}</span>
-          </Button>
+      {/* Access Level */}
+      <TableCell>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-[110px]">
+          <AccessIcon className="h-3.5 w-3.5 shrink-0" />
+          <span>{ACCESS_LEVELS.find(a => a.value === entry.accessLevel)?.label}</span>
         </div>
+      </TableCell>
 
-        {/* Footer row */}
-        <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={`text-xs ${categoryColor[entry.category]}`}>
-              {entry.category}
-            </Badge>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <AccessIcon className="h-3 w-3" />
-              {ACCESS_LEVELS.find(a => a.value === entry.accessLevel)?.label}
-            </span>
-          </div>
-          {entry.url && (
-            <a
-              href={entry.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          )}
+      {/* Actions */}
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => onEdit(entry)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => onDelete(entry)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -595,9 +651,27 @@ function EntryDialog({ open, editEntry, cryptoKey, onClose, onSaved, defaultCate
       if (editEntry) {
         await updateVaultEntry(editEntry.id, payload);
         toast({ title: 'Entry updated' });
+        recordAuditLog({
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          action: 'VAULT_UPDATE',
+          category: 'Vault',
+          details: `Updated vault credential '${values.title}' (${values.category})`,
+          companyId: user.companyId
+        });
       } else {
         await addVaultEntry(payload);
         toast({ title: 'Entry saved to vault' });
+        recordAuditLog({
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          action: 'VAULT_CREATE',
+          category: 'Vault',
+          details: `Added vault credential '${values.title}' (${values.category})`,
+          companyId: user.companyId
+        });
       }
 
       onSaved();
@@ -906,10 +980,19 @@ export function VaultClient() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !user) return;
     try {
       await deleteVaultEntry(deleteTarget.id);
       toast({ title: 'Entry deleted' });
+      recordAuditLog({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        action: 'VAULT_DELETE',
+        category: 'Vault',
+        details: `Deleted vault credential '${deleteTarget.title}'`,
+        companyId: user.companyId
+      });
       setDeleteTarget(null);
       loadEntries();
     } catch {
@@ -981,15 +1064,15 @@ export function VaultClient() {
         </TabsList>
       </Tabs>
 
-      {/* Entries grid */}
+      {/* Entries table */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="rounded-xl border bg-card h-36 animate-pulse" />
+        <div className="rounded-xl border bg-card p-6 space-y-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-10 bg-muted/50 animate-pulse rounded-md" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground gap-4">
+        <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground gap-4 border rounded-xl bg-card">
           <div className="rounded-full bg-muted p-5">
             <KeyRound className="h-8 w-8" />
           </div>
@@ -1006,16 +1089,30 @@ export function VaultClient() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(entry => (
-            <VaultCard
-              key={entry.id}
-              entry={entry}
-              cryptoKey={cryptoKey}
-              onEdit={handleEdit}
-              onDelete={setDeleteTarget}
-            />
-          ))}
+        <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="w-[260px]">Title / Service</TableHead>
+                <TableHead className="w-[120px]">Category</TableHead>
+                <TableHead className="w-[220px]">Username / Account</TableHead>
+                <TableHead className="w-[220px]">Password</TableHead>
+                <TableHead className="w-[140px]">Access</TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map(entry => (
+                <VaultTableRow
+                  key={entry.id}
+                  entry={entry}
+                  cryptoKey={cryptoKey}
+                  onEdit={handleEdit}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 

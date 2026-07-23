@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Employee } from '@/lib/types';
+import { recordAuditLog } from '@/lib/data';
 import { useToast } from './use-toast';
 
 interface AuthContextType {
@@ -171,6 +172,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(mappedEmployee);
       setFirebaseUser(sbUser);
+
+      // Audit log
+      recordAuditLog({
+        userId: mappedEmployee.id,
+        userName: mappedEmployee.name,
+        userEmail: mappedEmployee.email,
+        action: 'USER_LOGIN',
+        category: 'Auth',
+        details: 'User authenticated and logged into workspace',
+        companyId: mappedEmployee.companyId
+      });
+
       return null;
     } catch (error) {
       console.error("Unknown login error:", error);
@@ -221,6 +234,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    if (user) {
+      recordAuditLog({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        action: 'USER_LOGOUT',
+        category: 'Auth',
+        details: 'User logged out of session',
+        companyId: user.companyId
+      });
+    }
     await supabase.auth.signOut();
     setUser(null);
     setFirebaseUser(null);

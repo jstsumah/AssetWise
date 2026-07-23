@@ -87,3 +87,18 @@ export type VaultEntry = {
   updatedAt: string;
   passwordHistory?: PasswordHistoryEntry[];
 };
+
+export type AuditCategory = 'Auth' | 'Vault' | 'Assets' | 'Employees' | 'System';
+
+export type SystemAuditLog = {
+  id?: number | string;
+  userId?: string;
+  userName: string;
+  userEmail: string;
+  action: string;
+  category: AuditCategory;
+  details: string;
+  companyId?: string;
+  createdAt: string;
+};
+

@@ -286,3 +286,38 @@ CREATE POLICY "vault_history_insert" ON vault_password_history FOR INSERT TO aut
 -- RLS enabled (via ALTER TABLE above) but NO policies defined.
 -- This ensures ONLY the Supabase Service Role (backend APIs) can read/write.
 -- Standard authenticated users have 0 access.
+
+-- ─── 8. SYSTEM AUDIT LOGS TABLE & RLS ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS system_audit_logs (
+    id SERIAL PRIMARY KEY,
+    userId VARCHAR(255),
+    userName VARCHAR(255) NOT NULL,
+    userEmail VARCHAR(255) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL DEFAULT 'System',
+    details TEXT,
+    companyId VARCHAR(255),
+    createdAt TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_company ON system_audit_logs(companyId);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON system_audit_logs(userId);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON system_audit_logs(createdAt);
+
+ALTER TABLE system_audit_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "audit_logs_insert" ON system_audit_logs;
+DROP POLICY IF EXISTS "audit_logs_select" ON system_audit_logs;
+
+-- Any authenticated user can insert audit logs for actions they perform
+CREATE POLICY "audit_logs_insert" ON system_audit_logs 
+  FOR INSERT TO authenticated 
+  WITH CHECK (true);
+
+-- ONLY Admins can SELECT / view system audit logs
+CREATE POLICY "audit_logs_select" ON system_audit_logs 
+  FOR SELECT TO authenticated 
+  USING (
+    EXISTS (SELECT 1 FROM employees WHERE id = (auth.uid())::text AND role = 'Admin')
+  );
+

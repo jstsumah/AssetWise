@@ -93,9 +93,6 @@ export function BackupsClient() {
       if (json.success) {
         toast({ title: 'Backup Successful', description: `Generated file: ${json.fileName}` });
         await fetchBackups();
-        // Trigger download
-        const downloadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/backups/${json.fileName}`;
-        window.open(downloadUrl, '_blank');
       } else {
         toast({ title: 'Backup Failed', description: json.error, variant: 'destructive' });
       }

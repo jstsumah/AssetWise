@@ -101,6 +101,28 @@ Import via: **Table Editor → (select table) → Import data from CSV**
 
 ---
 
+## Step 5b — Re-create the Supabase Storage Bucket (`backups`)
+
+The application stores backup files inside a private Supabase Storage bucket named **`backups`**.
+This bucket is **not** included in database table exports and must be created on the new project.
+
+**Supabase Dashboard → Storage → Create a new bucket**
+
+| Setting | Value |
+|---------|-------|
+| Bucket Name | `backups` |
+| Public Bucket | **Disabled** (Private) |
+
+Or run this SQL in **SQL Editor**:
+
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('backups', 'backups', false)
+ON CONFLICT (id) DO NOTHING;
+```
+
+---
+
 ## Step 6 — Create Auth Users
 
 You must manually create auth accounts for every employee.
