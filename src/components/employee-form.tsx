@@ -20,6 +20,7 @@ import type { Employee, Company } from "@/lib/types"
 import { updateEmployee, clearCache, createEmployee } from "@/lib/data"
 import { LoaderCircle } from "lucide-react"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
+import { toTitleCase, withFormat } from "@/lib/utils"
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -38,10 +39,10 @@ export function EmployeeForm({ onFinished, departments, companies, employee }: {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: employee?.name ?? "",
+      name: toTitleCase(employee?.name ?? ""),
       email: employee?.email ?? "",
       department: employee?.department ?? "",
-      jobTitle: employee?.jobTitle ?? "",
+      jobTitle: toTitleCase(employee?.jobTitle ?? ""),
       role: employee?.role ?? "Employee",
       companyId: employee?.companyId ?? "",
     },
@@ -100,7 +101,7 @@ export function EmployeeForm({ onFinished, departments, companies, employee }: {
             <FormItem>
               <FormLabel>Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Jane Doe" {...field} />
+                <Input placeholder="e.g. Jane Doe" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -149,7 +150,7 @@ export function EmployeeForm({ onFinished, departments, companies, employee }: {
                 <FormItem>
                 <FormLabel>Job Title</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g. Software Engineer" {...field} />
+                    <Input placeholder="e.g. Software Engineer" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>

@@ -29,6 +29,7 @@ import { updateAsset, clearCache } from "@/lib/data"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
 import { format } from "date-fns"
 import { Textarea } from "./ui/textarea"
+import { toSentenceCase, withFormat } from "@/lib/utils"
 
 const formSchema = z.object({
   employeeId: z.string().min(1, "An employee must be selected."),
@@ -122,7 +123,7 @@ export function AssignAssetForm({ onFinished, employees, companies, asset }: { o
             <FormItem>
                 <FormLabel>Notes (Optional)</FormLabel>
                 <FormControl>
-                    <Textarea placeholder="e.g. Temporary assignment for Q3 project." {...field} />
+                    <Textarea placeholder="e.g. Temporary assignment for Q3 project." {...field} onChange={withFormat(field.onChange, toSentenceCase)} />
                 </FormControl>
                 <FormMessage />
             </FormItem>

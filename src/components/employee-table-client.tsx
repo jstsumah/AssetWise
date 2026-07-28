@@ -76,6 +76,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmployeeForm } from "./employee-form";
 import { SendPasswordResetDialog } from "./send-password-reset-dialog";
+import { SetPasswordDialog } from "./set-password-dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
@@ -106,6 +107,7 @@ export function EmployeeTableClient({
   const [isDeactivateAlertOpen, setIsDeactivateAlertOpen] = React.useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = React.useState(false);
   const [isPasswordResetDialogOpen, setIsPasswordResetDialogOpen] = React.useState(false);
+  const [isSetPasswordDialogOpen, setIsSetPasswordDialogOpen] = React.useState(false);
   const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | undefined>(undefined);
   const [isImporting, setIsImporting] = React.useState(false);
   const [importResult, setImportResult] = React.useState<ImportResult | null>(null);
@@ -374,6 +376,9 @@ export function EmployeeTableClient({
               <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setIsPasswordResetDialogOpen(true); }}>
                 Send Password Reset
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSelectedEmployee(employee); setIsSetPasswordDialogOpen(true); }}>
+                Set New Password
+              </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={() => openDeleteAlert(employee)} disabled={isCurrentUser}>
                   Delete User
               </DropdownMenuItem>
@@ -453,6 +458,7 @@ export function EmployeeTableClient({
       "Front Office",
       "Guest Relations",
       "Masseuse",
+      "Sales & Marketing",
     ];
     return [...new Set([...existingDepartments, ...additionalDepartments])].sort();
   }, [employees]);
@@ -663,6 +669,12 @@ export function EmployeeTableClient({
           open={isPasswordResetDialogOpen}
           onOpenChange={setIsPasswordResetDialogOpen}
           employeeEmail={selectedEmployee?.email || ''}
+          employeeName={selectedEmployee?.name || ''}
+        />
+        <SetPasswordDialog 
+          open={isSetPasswordDialogOpen}
+          onOpenChange={setIsSetPasswordDialogOpen}
+          employeeId={selectedEmployee?.id || ''}
           employeeName={selectedEmployee?.name || ''}
         />
 

@@ -50,6 +50,7 @@ import {
   generatePassword,
 } from '@/lib/crypto';
 import type { VaultEntry, VaultCategory, VaultAccess, PasswordHistoryEntry } from '@/lib/types';
+import { toTitleCase, toSentenceCase, withFormat } from '@/lib/utils';
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 
@@ -570,11 +571,11 @@ function EntryDialog({ open, editEntry, cryptoKey, onClose, onSaved, defaultCate
       if (editEntry && cryptoKey) {
         const plain = await decryptPassword(editEntry.encryptedPassword, editEntry.iv, cryptoKey);
         form.reset({
-          title: editEntry.title,
+          title: toTitleCase(editEntry.title),
           username: editEntry.username ?? '',
           password: plain ?? '',
           url: editEntry.url ?? '',
-          notes: editEntry.notes ?? '',
+          notes: toSentenceCase(editEntry.notes ?? ''),
           category: editEntry.category,
           accessLevel: editEntry.accessLevel,
         });
@@ -700,7 +701,7 @@ function EntryDialog({ open, editEntry, cryptoKey, onClose, onSaved, defaultCate
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem>
                 <FormLabel>{config.titleLabel} *</FormLabel>
-                <FormControl><Input placeholder={config.titlePlaceholder} {...field} /></FormControl>
+                <FormControl><Input placeholder={config.titlePlaceholder} {...field} onChange={withFormat(field.onChange, toTitleCase)} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -881,7 +882,7 @@ function EntryDialog({ open, editEntry, cryptoKey, onClose, onSaved, defaultCate
               <FormItem>
                 <FormLabel>Notes</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Additional info..." className="resize-none" rows={3} {...field} />
+                  <Textarea placeholder="Additional info..." className="resize-none" rows={3} {...field} onChange={withFormat(field.onChange, toSentenceCase)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

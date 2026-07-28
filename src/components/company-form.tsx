@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast"
 import type { Company } from "@/lib/types"
 import { updateCompany, addCompany, clearCache } from "@/lib/data"
 import { useDataRefresh } from "@/hooks/use-data-refresh"
+import { toTitleCase, withFormat } from "@/lib/utils"
 
 const formSchema = z.object({
   name: z.string().min(2, "Company name must be at least 2 characters long."),
@@ -42,12 +43,12 @@ export function CompanyForm({ onFinished, company }: { onFinished: () => void, c
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: company?.name ?? "",
+      name: toTitleCase(company?.name ?? ""),
       website: company?.website ?? "",
       email: company?.email ?? "",
       phone: company?.phone ?? "",
-      industry: company?.industry ?? "",
-      address: company?.address ?? "",
+      industry: toTitleCase(company?.industry ?? ""),
+      address: toTitleCase(company?.address ?? ""),
       taxId: company?.taxId ?? "",
     },
   })
@@ -104,7 +105,7 @@ export function CompanyForm({ onFinished, company }: { onFinished: () => void, c
               <FormItem>
                 <FormLabel>Company Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Stark Industries" {...field} />
+                  <Input placeholder="e.g. Stark Industries" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -119,7 +120,7 @@ export function CompanyForm({ onFinished, company }: { onFinished: () => void, c
                 <FormItem>
                   <FormLabel>Industry</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Technology, Finance" {...field} />
+                    <Input placeholder="e.g. Technology, Finance" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -193,7 +194,7 @@ export function CompanyForm({ onFinished, company }: { onFinished: () => void, c
                 <FormItem>
                   <FormLabel>Office Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. 10880 Malibu Point, CA" {...field} />
+                    <Input placeholder="e.g. 10880 Malibu Point, CA" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -25,6 +25,7 @@ import { Separator } from './ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { clearCache } from '@/lib/data';
 import { useDataRefresh } from '@/hooks/use-data-refresh';
+import { toTitleCase, withFormat } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -43,8 +44,8 @@ export function ProfileForm({ user, onFinished, departments }: { user: Employee,
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user.name,
-      jobTitle: user.jobTitle,
+      name: toTitleCase(user.name),
+      jobTitle: toTitleCase(user.jobTitle),
       department: user.department,
     },
   });
@@ -99,7 +100,7 @@ export function ProfileForm({ user, onFinished, departments }: { user: Employee,
                 <FormItem>
                 <FormLabel>Full Name</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g. Jane Doe" {...field} />
+                    <Input placeholder="e.g. Jane Doe" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -114,7 +115,7 @@ export function ProfileForm({ user, onFinished, departments }: { user: Employee,
                 <FormItem>
                 <FormLabel>Job Title</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g. Software Engineer" {...field} />
+                    <Input placeholder="e.g. Software Engineer" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>

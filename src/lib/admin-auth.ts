@@ -45,3 +45,29 @@ export function getPasswordResetErrorMessage(errorCode: string): string {
 
   return errorMessages[errorCode] || errorCode;
 }
+
+/**
+ * Manually set a new password for a user via the backend API (admin function)
+ * @param userId - The ID of the user
+ * @param newPassword - The new password to set
+ * @returns An object containing success status and optional error message
+ */
+export async function adminSetUserPassword(userId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch('/api/auth/set-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, newPassword })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      return { success: false, error: data.error || 'Failed to update password' };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}

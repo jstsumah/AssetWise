@@ -8,7 +8,7 @@ import { z } from "zod"
 import { CalendarIcon, LoaderCircle } from "lucide-react"
 import { format } from "date-fns"
 
-import { cn } from "@/lib/utils"
+import { cn, toAllCaps, toTitleCase, toSentenceCase, withFormat } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -81,15 +81,15 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
   const form = useForm<RegisterAssetFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      serialNumber: asset?.serialNumber ?? "",
-      tagNo: asset?.tagNo ?? "",
-      brand: asset?.brand ?? "",
-      model: asset?.model ?? "",
+      serialNumber: toAllCaps(asset?.serialNumber ?? ""),
+      tagNo: toAllCaps(asset?.tagNo ?? ""),
+      brand: toTitleCase(asset?.brand ?? ""),
+      model: toTitleCase(asset?.model ?? ""),
       category: asset?.category ?? undefined,
       companyId: asset?.companyId ?? undefined,
       purchaseDate: asset?.purchaseDate ? new Date(asset.purchaseDate) : undefined,
       assetValue: asset?.assetValue ?? 0,
-      remarks: asset?.remarks ?? "",
+      remarks: toSentenceCase(asset?.remarks ?? ""),
       phoneNumber: asset?.phoneNumber ?? "",
       emailAddress: "",
       emailPassword: "",
@@ -215,7 +215,7 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
                 <FormItem>
                 <FormLabel>Serial Number</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g. SN-LAP-005" {...field} />
+                    <Input placeholder="e.g. SN-LAP-005" {...field} onChange={withFormat(field.onChange, toAllCaps)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -228,7 +228,7 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
                 <FormItem>
                 <FormLabel>Tag No</FormLabel>
                 <FormControl>
-                    <Input placeholder="e.g. ASSET-001" {...field} />
+                    <Input placeholder="e.g. ASSET-001" {...field} onChange={withFormat(field.onChange, toAllCaps)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -291,7 +291,7 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
               <FormItem>
                 <FormLabel>Brand</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Dell" {...field} />
+                  <Input placeholder="e.g. Dell" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -304,7 +304,7 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
               <FormItem>
                 <FormLabel>Model</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. XPS 15" {...field} />
+                  <Input placeholder="e.g. XPS 15" {...field} onChange={withFormat(field.onChange, toTitleCase)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -374,7 +374,7 @@ export function RegisterAssetForm({ onFinished, companies, asset, assets }: { on
                 <FormItem>
                 <FormLabel>Remarks (Optional)</FormLabel>
                 <FormControl>
-                    <Textarea placeholder="e.g. Screen has a minor scratch." {...field} />
+                    <Textarea placeholder="e.g. Screen has a minor scratch." {...field} onChange={withFormat(field.onChange, toSentenceCase)} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
