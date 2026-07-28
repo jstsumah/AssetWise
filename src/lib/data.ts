@@ -482,12 +482,12 @@ export const importEmployees = async (
     const companyNameMap = new Map(companies.map(c => [c.name.toLowerCase(), c.id]));
 
     for (const row of rows) {
-        const name      = (row['Name']       || row['name']        || '').trim();
-        const email     = (row['Email']      || row['email']       || '').trim().toLowerCase();
-        const department= (row['Department'] || row['department']  || '').trim();
-        const jobTitle  = (row['Job Title']  || row['job title']   || row['jobTitle'] || '').trim();
-        const roleRaw   = (row['Role']       || row['role']        || 'Employee').trim();
-        const companyName=(row['Company']    || row['company']     || '').trim();
+        const name      = String(row['Name']       || row['name']        || '').trim();
+        const email     = String(row['Email']      || row['email']       || '').trim().toLowerCase();
+        const department= String(row['Department'] || row['department']  || '').trim();
+        const jobTitle  = String(row['Job Title']  || row['job title']   || row['jobTitle'] || '').trim();
+        const roleRaw   = String(row['Role']       || row['role']        || 'Employee').trim();
+        const companyName=String(row['Company']    || row['company']     || '').trim();
 
         // Validate required fields
         if (!name || !email) {
@@ -553,15 +553,15 @@ export const importAssets = async (
     const validCategories = new Set(['Laptop', 'Desktop', 'Phone', 'Tablet', 'Other']);
 
     for (const row of rows) {
-        const tagNo        = (row['Tag No']        || row['tag no']        || row['tagNo']       || '').trim();
-        const serialNumber = (row['Serial Number'] || row['serial number'] || row['serialNumber']|| '').trim();
-        const categoryRaw  = (row['Category']      || row['category']      || 'Other').trim();
-        const brand        = (row['Brand']         || row['brand']         || '').trim();
-        const model        = (row['Model']         || row['model']         || '').trim();
-        const companyName  = (row['Company']       || row['company']       || '').trim();
-        const purchaseDate = (row['Purchase Date'] || row['purchase date'] || row['purchaseDate']|| '').trim();
-        const assetValueRaw= (row['Asset Value']   || row['asset value']   || row['assetValue']  || '0').trim();
-        const remarks      = (row['Remarks']       || row['remarks']       || '').trim();
+        const tagNo        = String(row['Tag No']        || row['tag no']        || row['tagNo']       || '').trim();
+        const serialNumber = String(row['Serial Number'] || row['serial number'] || row['serialNumber']|| '').trim();
+        const categoryRaw  = String(row['Category']      || row['category']      || 'Other').trim();
+        const brand        = String(row['Brand']         || row['brand']         || '').trim();
+        const model        = String(row['Model']         || row['model']         || '').trim();
+        const companyName  = String(row['Company']       || row['company']       || '').trim();
+        const purchaseDate = String(row['Purchase Date'] || row['purchase date'] || row['purchaseDate']|| '').trim();
+        const assetValueRaw= String(row['Asset Value']   || row['asset value']   || row['assetValue']  || '0').trim();
+        const remarks      = String(row['Remarks']       || row['remarks']       || '').trim();
 
         // Validate required fields
         if (!serialNumber || !brand || !model) {
@@ -630,13 +630,13 @@ export const importCompanies = async (
     const existingNames = new Set(existing.map(c => c.name.toLowerCase()));
 
     for (const row of rows) {
-        const name     = (row['Name']     || row['name']     || '').trim();
-        const website  = (row['Website']  || row['website']  || '').trim();
-        const email    = (row['Email']    || row['email']    || '').trim();
-        const phone    = (row['Phone']    || row['phone']    || '').trim();
-        const industry = (row['Industry'] || row['industry'] || '').trim();
-        const address  = (row['Address']  || row['address']  || '').trim();
-        const taxId    = (row['Tax ID']   || row['tax id']   || row['taxId']  || '').trim();
+        const name     = String(row['Name']     || row['name']     || '').trim();
+        const website  = String(row['Website']  || row['website']  || '').trim();
+        const email    = String(row['Email']    || row['email']    || '').trim();
+        const phone    = String(row['Phone']    || row['phone']    || '').trim();
+        const industry = String(row['Industry'] || row['industry'] || '').trim();
+        const address  = String(row['Address']  || row['address']  || '').trim();
+        const taxId    = String(row['Tax ID']   || row['tax id']   || row['taxId']  || '').trim();
 
         if (!name) {
             result.failed++;

@@ -110,7 +110,7 @@ export function CompanyTableClient({
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' }) as Record<string, string>[];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false }) as Record<string, string>[];
 
       // Filter out completely empty rows
       const nonEmptyRows = rows.filter(row => Object.values(row).some(val => val !== ''));
