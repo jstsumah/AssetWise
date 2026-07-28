@@ -121,6 +121,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          if (window.location.hash.includes('type=recovery') && window.location.pathname !== '/reset-password') {
+            window.location.href = '/reset-password' + window.location.hash;
+          }
+        `}} />
+      </head>
       <body
         className={cn(
           'min-h-screen bg-background font-sans antialiased',

@@ -20,13 +20,13 @@ export async function adminSendPasswordReset(email: string): Promise<string | nu
 
     if (error) {
       console.error(`[AdminAuth] Failed to send password reset: ${error.message}`);
-      return 'auth/unknown-error';
+      return error.message || 'auth/unknown-error';
     }
     console.log(`[AdminAuth] Password reset email sent successfully to: ${email}`);
     return null;
   } catch (error: any) {
     console.error(`[AdminAuth] Unknown error during password reset:`, error);
-    return 'auth/unknown-error';
+    return error?.message || 'auth/unknown-error';
   }
 }
 
@@ -40,7 +40,8 @@ export function getPasswordResetErrorMessage(errorCode: string): string {
     'auth/too-many-requests': 'Too many reset requests. Please try again later.',
     'auth/missing-email': 'Email address is required.',
     'auth/internal-error': 'An internal error occurred. Please try again.',
+    'auth/unknown-error': 'Failed to send password reset email. Please try again.',
   };
 
-  return errorMessages[errorCode] || 'Failed to send password reset email. Please try again.';
+  return errorMessages[errorCode] || errorCode;
 }
